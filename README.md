@@ -1,4 +1,4 @@
-# Batman
+# batman
 
 Batman doesn’t need superpowers. Just the right skills.
 
@@ -14,24 +14,50 @@ Clone Batman, then run:
 ./scripts/install.sh
 ```
 
-The installer links every folder under `skills/` into `~/.agents/skills`, which Codex and other agents can discover as personal skills. Because these links point back to the clone, updating the clone also updates the shared skills.
-
-It also creates managed copies under `~/.copilot/skills` for Copilot CLI. Codex and Copilot use different metadata for manual-only skills, so these copies add Copilot's `disable-model-invocation` field when the canonical skill's `agents/openai.yaml` disables implicit invocation. Run the installer again after updating the clone to refresh the Copilot copies. Existing files that Batman does not manage are never replaced.
-
-Set both destination variables to test or use other locations:
+With no arguments, the installer creates managed copies for both Codex and Copilot CLI. You can instead choose one installation format explicitly:
 
 ```sh
-BATMAN_SKILLS_DIR=/path/to/shared-skills \
-BATMAN_COPILOT_SKILLS_DIR=/path/to/copilot-skills \
-./scripts/install.sh
+./scripts/install.sh --target codex
+./scripts/install.sh --target copilot
+./scripts/install.sh --target portable
+./scripts/install.sh --target all
 ```
 
-The installer does not replace existing files or links. Move or remove a conflicting destination yourself, then run it again.
+`all` is the default and installs the `codex` and `copilot` targets. The destinations are:
+
+- `codex`: `~/.agents/skills`
+- `copilot`: `~/.copilot/skills`
+- `portable`: `~/.agents/skills`, intended for a non-Codex setup
+
+Every Batman skill is manual-only by default. The canonical source of truth is `disable-model-invocation` in each `SKILL.md`: `true` means manual-only, while changing it to `false` is the explicit opt-in to automatic invocation.
+
+Portable and Copilot installations preserve the canonical skill unchanged. Codex does not accept that portable frontmatter field, so its managed copy removes the field and translates it to the supported `policy.allow_implicit_invocation` setting in `agents/openai.yaml`. Run the installer again after updating the clone to refresh managed copies. The installer also migrates symlinks created by older Batman versions when they point to the same clone; it never replaces unrelated files or links.
+
+Before writing an installation, the installer checks every skill. It requires exactly one boolean `disable-model-invocation` value and rejects a canonical Codex invocation policy, avoiding two sources of truth. When adding an external skill, translate any harness-specific invocation setting to that canonical field while preserving its intent, attribution, and required notices.
+
+Override destinations with target-specific variables. `BATMAN_SKILLS_DIR` remains a compatible fallback for the Codex and portable destinations:
+
+```sh
+BATMAN_CODEX_SKILLS_DIR=/path/to/codex-skills \
+BATMAN_COPILOT_SKILLS_DIR=/path/to/copilot-skills \
+./scripts/install.sh
+
+BATMAN_PORTABLE_SKILLS_DIR=/path/to/agent-skills \
+./scripts/install.sh --target portable
+```
+
+If a destination conflicts with something Batman does not manage, move or remove that destination yourself and run the installer again.
 
 Manual-only skills use harness-specific invocation syntax:
 
 - Codex: `$grill-me`, `$grill-with-docs`, or `$unslop`
 - Copilot CLI: `/grill-me`, `/grill-with-docs`, or `/unslop`
+
+Run the policy check directly with:
+
+```sh
+./scripts/check-skills.sh
+```
 
 ## Included skills
 
