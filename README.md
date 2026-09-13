@@ -64,5 +64,6 @@ Run the policy check directly with:
 - `unslop` removes common AI writing patterns.
 - `grill-me` interviews you until a plan or design has no unresolved decisions.
 - `grill-with-docs` runs the same interview while maintaining domain language and recording qualifying architecture decisions.
+- `to-spec` turns an agreed conversation into a project issue-tracker spec without another interview.
 
 The two grill entry points share the internal `grilling` skill. `grill-with-docs` also uses `domain-modeling` and its document formats. See [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md) for sources, local adaptations, and licenses.

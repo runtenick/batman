@@ -2,7 +2,7 @@
 
 ## Matt Pocock skills
 
-`skills/grill-me`, `skills/grill-with-docs`, `skills/grilling`, and `skills/domain-modeling` are adapted from [mattpocock/skills](https://github.com/mattpocock/skills), using the local snapshot in `~/skills-db/mattpocock` on September 12, 2026.
+`skills/grill-me`, `skills/grill-with-docs`, `skills/grilling`, `skills/domain-modeling`, and `skills/to-spec` are adapted from [mattpocock/skills](https://github.com/mattpocock/skills), using the local snapshot in `~/skills-db/mattpocock` on September 12, 2026.
 
 Batman keeps canonical `SKILL.md` files valid for Codex by expressing manual-only invocation in `agents/openai.yaml`. The installer generates Copilot-specific installed copies with the source `disable-model-invocation` frontmatter restored. It also replaces the two wrapper skills' host-specific `Skill` tool calls with equivalent sibling file references so the composition works without that tool. The shared skill instructions and supporting files are otherwise unchanged.
 
