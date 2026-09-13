@@ -12,13 +12,16 @@ source_dir=${BATMAN_SOURCE_DIR:-"$repo_dir/skills"}
 codex_destination_dir=${BATMAN_CODEX_SKILLS_DIR:-${BATMAN_SKILLS_DIR:-"$HOME/.agents/skills"}}
 copilot_destination_dir=${BATMAN_COPILOT_SKILLS_DIR:-"$HOME/.copilot/skills"}
 portable_destination_dir=${BATMAN_PORTABLE_SKILLS_DIR:-${BATMAN_SKILLS_DIR:-"$HOME/.agents/skills"}}
+command_bin_dir=${BATMAN_BIN_DIR:-"$HOME/.local/bin"}
 
 usage() {
-    printf '%s\n' "Usage: $0 [--target codex|copilot|portable|all]"
+    printf '%s\n' "Usage: $0 [--target codex|copilot|portable|all] [--install-command]"
     printf '\n%s\n' "With no target, installs Codex and Copilot projections (same as --target all)."
+    printf '%s\n' '       --install-command also installs the batman command in $BATMAN_BIN_DIR or ~/.local/bin.'
 }
 
 target=all
+install_command=0
 while [ "$#" -gt 0 ]; do
     case $1 in
         --target)
@@ -32,6 +35,10 @@ while [ "$#" -gt 0 ]; do
             ;;
         --target=*)
             target=${1#--target=}
+            shift
+            ;;
+        --install-command)
+            install_command=1
             shift
             ;;
         -h|--help)
@@ -300,6 +307,32 @@ replace_projection() {
     return 1
 }
 
+install_cli_command() {
+    command_path="$command_bin_dir/batman"
+    command_target="$script_dir/batman"
+
+    mkdir -p "$command_bin_dir"
+
+    if [ -L "$command_path" ]; then
+        existing_target=$(readlink "$command_path")
+        if [ "$existing_target" = "$command_target" ]; then
+            printf 'command unchanged %s\n' "$command_path"
+            return 0
+        fi
+
+        printf 'install: command path already links to %s: %s\n' "$existing_target" "$command_path" >&2
+        return 1
+    fi
+
+    if [ -e "$command_path" ]; then
+        printf 'install: command path already exists: %s\n' "$command_path" >&2
+        return 1
+    fi
+
+    ln -s "$command_target" "$command_path"
+    printf 'command installed %s -> %s\n' "$command_path" "$command_target"
+}
+
 install_target() {
     target_name=$1
     destination_dir=$2
@@ -415,7 +448,11 @@ case $target in
         install_target codex "$codex_destination_dir" codex
         install_target copilot "$copilot_destination_dir" portable
         ;;
-esac
+    esac
+
+if [ "$install_command" -eq 1 ]; then
+    install_cli_command
+fi
 
 printf '\n%d installed, %d updated, %d unchanged, %d preserved, %d conflicts\n' "$installed" "$updated" "$unchanged" "$preserved" "$conflicts"
 

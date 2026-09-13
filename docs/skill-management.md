@@ -40,7 +40,7 @@ The manager must never replace a locally modified skill during an ordinary synch
 
 ## Command contract
 
-The user-facing entry point will be `./scripts/batman`.
+The user-facing entry point is `./scripts/batman`. The installer can also place a `batman` symlink in `~/.local/bin` (or `$BATMAN_BIN_DIR`) so the same entry point is available directly as `batman`.
 
 ```text
 ./scripts/batman status [--target codex|copilot|portable|all]

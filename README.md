@@ -14,6 +14,15 @@ Clone Batman, then run:
 ./scripts/batman sync
 ```
 
+To make `batman` available as a command, install a user-local symlink while syncing:
+
+```sh
+./scripts/install.sh --install-command
+batman status
+```
+
+This installs the launcher at `~/.local/bin/batman`. Ensure that directory is on your `PATH`; override it with `BATMAN_BIN_DIR` when needed. The launcher points to this checkout, so repository updates are immediately available through the command.
+
 With no arguments, the installer creates managed copies for both Codex and Copilot CLI. You can instead choose one installation format explicitly:
 
 ```sh
@@ -78,6 +87,12 @@ Run the policy check directly with:
 
 ```sh
 ./scripts/check-skills.sh
+```
+
+Run the installer regression tests with:
+
+```sh
+sh tests/test-batman.sh
 ```
 
 ## Included skills
