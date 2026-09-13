@@ -2,9 +2,9 @@
 
 ## Matt Pocock skills
 
-`skills/grill-me`, `skills/grill-with-docs`, `skills/grilling`, `skills/domain-modeling`, and `skills/to-spec` are adapted from [mattpocock/skills](https://github.com/mattpocock/skills), using the local snapshot in `~/skills-db/mattpocock` on September 12, 2026.
+`skills/grill-me`, `skills/grill-with-docs`, `skills/grilling`, `skills/domain-modeling`, `skills/to-spec`, `skills/to-tickets`, `skills/implement`, `skills/tdd`, and `skills/code-review` are adapted from [mattpocock/skills](https://github.com/mattpocock/skills), using the local snapshot in `~/skills-db/mattpocock` on September 12, 2026.
 
-Batman keeps canonical `SKILL.md` files valid for Codex by expressing manual-only invocation in `agents/openai.yaml`. The installer generates Copilot-specific installed copies with the source `disable-model-invocation` frontmatter restored. It also replaces the two wrapper skills' host-specific `Skill` tool calls with equivalent sibling file references so the composition works without that tool. The shared skill instructions and supporting files are otherwise unchanged.
+Batman keeps every canonical skill manual-only and lets the installer derive target-specific invocation metadata. It replaces host-specific skill calls with sibling file references where the workflow requires another included skill. The implementation skill does not commit without explicit permission, and code review keeps delegation under user control. Tracker setup references were adapted so the skills can use local files or an already configured tracker without requiring Matt's setup skill. Other shared instructions and supporting files remain close to the source.
 
 MIT License
 

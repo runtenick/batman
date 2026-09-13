@@ -58,10 +58,14 @@ See [docs/skill-management.md](./docs/skill-management.md) for the state and upd
 ## Skills
 
 - `domain-modeling` builds a project glossary and architecture decision records.
+- `code-review` reviews a change separately against repository standards and its originating spec.
 - `grill-me` interviews the user to resolve decisions in a plan or design.
 - `grill-with-docs` combines that interview with domain and architecture notes.
 - `grilling` contains the shared interview workflow used by the grill skills.
+- `implement` builds approved work with TDD where it fits, then reviews the result.
+- `tdd` guides test-first implementation at agreed public seams.
 - `to-spec` turns the current conversation into an issue-tracker spec.
+- `to-tickets` turns a plan or spec into dependency-aware tracer-bullet tickets.
 - `unslop` removes common AI writing patterns.
 
 See [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md) for sources, adaptations, and licenses.
