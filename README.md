@@ -48,6 +48,27 @@ BATMAN_PORTABLE_SKILLS_DIR=/path/to/agent-skills \
 
 If a destination conflicts with something Batman does not manage, move or remove that destination yourself and run the installer again.
 
+## Manage installed skills
+
+Inspect each target's invocation mode and synchronization state:
+
+```sh
+./scripts/batman status
+```
+
+Invocation is managed locally per target and defaults to manual:
+
+```sh
+./scripts/batman enable unslop --target codex
+./scripts/batman disable unslop --target codex
+```
+
+Use an explicit update when you want to refresh one skill. Clean copies update immediately; locally modified copies require confirmation before replacement:
+
+```sh
+./scripts/batman update unslop --target codex
+```
+
 Manual-only skills use harness-specific invocation syntax:
 
 - Codex: `$grill-me`, `$grill-with-docs`, or `$unslop`

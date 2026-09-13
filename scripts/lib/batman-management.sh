@@ -213,6 +213,129 @@ write_invocation() {
     fi
 }
 
+render_codex_skill() {
+    source_file=$1
+    destination_file=$2
+
+    awk '
+        NR == 1 && $0 == "---" {
+            in_frontmatter = 1
+            print
+            next
+        }
+        in_frontmatter && $0 == "---" {
+            in_frontmatter = 0
+            print
+            next
+        }
+        in_frontmatter && /^disable-model-invocation:[[:space:]]*/ { next }
+        { print }
+    ' "$source_file" > "$destination_file"
+}
+
+render_update_projection() {
+    skill_source=$1
+    projection_dir=$2
+    projection_kind=$3
+    invocation=$4
+
+    mkdir -p "$projection_dir"
+    cp -R "$skill_source"/. "$projection_dir"/
+
+    if [ "$projection_kind" = codex ]; then
+        render_codex_skill "$skill_source/SKILL.md" "$projection_dir/SKILL.md.tmp"
+        mv "$projection_dir/SKILL.md.tmp" "$projection_dir/SKILL.md"
+        write_invocation codex "$projection_dir" "$invocation"
+    else
+        write_portable_invocation "$projection_dir/SKILL.md" "$invocation"
+    fi
+
+    printf '%s\n%s\n' "$skill_source" "$projection_kind" > "$projection_dir/.batman-source"
+}
+
+replace_projection() {
+    destination=$1
+    projection_dir=$2
+    backup_parent=$(mktemp -d "${destination}.backup.XXXXXX")
+
+    if ! mv "$destination" "$backup_parent/original"; then
+        rm -rf "$backup_parent"
+        return 1
+    fi
+
+    if mv "$projection_dir" "$destination"; then
+        rm -rf "$backup_parent"
+        return 0
+    fi
+
+    mv "$backup_parent/original" "$destination"
+    rm -rf "$backup_parent"
+    return 1
+}
+
+confirm_update() {
+    skill_name=$1
+    target_name=$2
+    reason=$3
+
+    printf '%s %s %s. Replace it with the current Batman version? [y/N] ' "$target_name" "$skill_name" "$reason" >&2
+    answer=
+    IFS= read -r answer || true
+    case $answer in
+        y|Y|yes|YES|Yes) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
+update_skill_on_target() {
+    skill_name=$1
+    target_name=$2
+    destination_dir=$(target_destination "$target_name")
+    projection_kind=$(target_projection_kind "$target_name")
+    destination="$destination_dir/$skill_name"
+    state_file="$destination_dir/.batman/state.tsv"
+    skill_source="$source_dir/$skill_name"
+
+    if [ ! -d "$destination" ] || [ ! -f "$destination/.batman-source" ] || [ "$(sed -n '1p' "$destination/.batman-source")" != "$skill_source" ]; then
+        printf '%s %s is not an installed Batman skill; run sync first\n' "$target_name" "$skill_name" >&2
+        return 1
+    fi
+
+    invocation=$(existing_invocation "$projection_kind" "$destination")
+    source_hash=$(managed_hash "$skill_source")
+    current_hash=$(managed_hash "$destination")
+    previous_source_hash=$(state_get "$state_file" source-hash "$skill_name" 2>/dev/null || true)
+    previous_installed_hash=$(state_get "$state_file" installed-hash "$skill_name" 2>/dev/null || true)
+    reason=
+
+    if [ -z "$previous_source_hash" ] || [ -z "$previous_installed_hash" ]; then
+        reason='has no recorded baseline'
+    elif [ "$current_hash" != "$previous_installed_hash" ]; then
+        reason='has local changes'
+    elif [ "$source_hash" = "$previous_source_hash" ]; then
+        printf '%s %s is already current\n' "$target_name" "$skill_name"
+        return 0
+    fi
+
+    if [ -n "$reason" ] && ! confirm_update "$skill_name" "$target_name" "$reason"; then
+        printf '%s %s preserved\n' "$target_name" "$skill_name"
+        return 0
+    fi
+
+    projection_dir="$management_work_dir/$target_name/$skill_name"
+    render_update_projection "$skill_source" "$projection_dir" "$projection_kind" "$invocation"
+    if ! replace_projection "$destination" "$projection_dir"; then
+        printf '%s %s could not be replaced\n' "$target_name" "$skill_name" >&2
+        return 1
+    fi
+
+    installed_hash=$(managed_hash "$destination")
+    state_set "$state_file" invocation "$skill_name" "$invocation"
+    state_set "$state_file" source-hash "$skill_name" "$source_hash"
+    state_set "$state_file" installed-hash "$skill_name" "$installed_hash"
+    printf '%s %s updated\n' "$target_name" "$skill_name"
+}
+
 target_destination() {
     case $1 in
         codex) printf '%s\n' "$codex_destination_dir" ;;
