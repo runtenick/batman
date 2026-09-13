@@ -1,105 +1,74 @@
 # batman
 
-Batman doesn’t need superpowers. Just the right skills.
+Batman is an experimental manager for a personal collection of AI-agent skills. The repository keeps one canonical copy of each skill and installs adjusted copies for Codex, GitHub Copilot CLI, or a portable target.
 
-My personal collection of skills and notes for working with AI. I explore other people's skills, try them in daily development, keep what helps, and write my own when useful. The workflow will develop through use.
+It grows through personal use and does not promise a stable command or skill catalog.
 
 Inspired by [Matt Pocock's skills](https://github.com/mattpocock/skills) and [pstack](https://github.com/cursor/plugins/tree/main/pstack).
 
 ## Install
 
-Clone Batman, then run:
-
-```sh
-./scripts/batman sync
-```
-
-To make `batman` available as a command, install a user-local symlink while syncing:
+Clone the repository, then run this command from its root:
 
 ```sh
 ./scripts/install.sh --install-command
-batman status
 ```
 
-This installs the launcher at `~/.local/bin/batman`. Ensure that directory is on your `PATH`; override it with `BATMAN_BIN_DIR` when needed. The launcher points to this checkout, so repository updates are immediately available through the command.
+This installs the skills for Codex and Copilot CLI, then links `batman` into `~/.local/bin`. Add that directory to `PATH` if needed. The link points to the checkout, so the command uses the current repository code.
 
-With no arguments, the installer creates managed copies for both Codex and Copilot CLI. You can instead choose one installation format explicitly:
+To install skills without the command link, or to choose one target:
 
 ```sh
+./scripts/batman sync
 ./scripts/batman sync --target codex
 ./scripts/batman sync --target copilot
 ./scripts/batman sync --target portable
-./scripts/batman sync --target all
 ```
 
-`all` is the default and installs the `codex` and `copilot` targets. The destinations are:
+`all` is the default target. It means Codex and Copilot, not portable.
 
-- `codex`: `~/.agents/skills`
-- `copilot`: `~/.copilot/skills`
-- `portable`: `~/.agents/skills`, intended for a non-Codex setup
+| Target | Default destination |
+| --- | --- |
+| `codex` | `~/.agents/skills` |
+| `copilot` | `~/.copilot/skills` |
+| `portable` | `~/.agents/skills` |
 
-Every Batman skill is manual-only by default. The canonical source of truth is `disable-model-invocation` in each `SKILL.md`: `true` means manual-only, while changing it to `false` is the explicit opt-in to automatic invocation.
+Override these paths with `BATMAN_CODEX_SKILLS_DIR`, `BATMAN_COPILOT_SKILLS_DIR`, and `BATMAN_PORTABLE_SKILLS_DIR`. Set `BATMAN_BIN_DIR` to change the command location.
 
-Portable and Copilot installations preserve the canonical skill unchanged. Codex does not accept that portable frontmatter field, so its managed copy removes the field and translates it to the supported `policy.allow_implicit_invocation` setting in `agents/openai.yaml`. Run the installer again after updating the clone to refresh managed copies. The installer also migrates symlinks created by older Batman versions when they point to the same clone; it never replaces unrelated files or links.
+The scripts require a POSIX shell and either `sha256sum` or `shasum`.
 
-Before writing an installation, the installer checks every skill. It requires exactly one boolean `disable-model-invocation` value and rejects a canonical Codex invocation policy, avoiding two sources of truth. When adding an external skill, translate any harness-specific invocation setting to that canonical field while preserving its intent, attribution, and required notices.
+## Commands
 
-Override destinations with target-specific variables. `BATMAN_SKILLS_DIR` remains a compatible fallback for the Codex and portable destinations:
-
-```sh
-BATMAN_CODEX_SKILLS_DIR=/path/to/codex-skills \
-BATMAN_COPILOT_SKILLS_DIR=/path/to/copilot-skills \
-./scripts/install.sh
-
-BATMAN_PORTABLE_SKILLS_DIR=/path/to/agent-skills \
-./scripts/install.sh --target portable
+```text
+batman sync [--target codex|copilot|portable|all]
+batman status [--target codex|copilot|portable|all]
+batman enable <skill> [--target codex|copilot|portable|all]
+batman disable <skill> [--target codex|copilot|portable|all]
+batman update <skill> [--target codex|copilot|portable|all]
 ```
 
-If a destination conflicts with something Batman does not manage, move or remove that destination yourself and run the installer again.
+`status` reports installation, local changes, invocation mode, and available source updates. `enable` allows automatic invocation for one installed target. `disable` returns it to manual-only. `update` refreshes one skill and asks before replacing local changes.
 
-## Manage installed skills
+`sync` installs missing skills and updates clean managed copies. It preserves locally modified copies and reports a conflict when both the source and installed copy changed. It also migrates symlinks created by older Batman versions when they point to this checkout.
 
-Inspect each target's invocation mode and synchronization state:
+Every canonical skill sets `disable-model-invocation: true`, so skills start as manual-only. Copilot and portable copies use that field for their local invocation mode. Codex copies remove the unsupported field and store the local mode as `policy.allow_implicit_invocation` in `agents/openai.yaml`.
 
-```sh
-./scripts/batman status
-```
+See [docs/skill-management.md](./docs/skill-management.md) for the state and update model.
 
-Invocation is managed locally per target and defaults to manual:
+## Skills
 
-```sh
-./scripts/batman enable unslop --target codex
-./scripts/batman disable unslop --target codex
-```
+- `domain-modeling` builds a project glossary and architecture decision records.
+- `grill-me` interviews the user to resolve decisions in a plan or design.
+- `grill-with-docs` combines that interview with domain and architecture notes.
+- `grilling` contains the shared interview workflow used by the grill skills.
+- `to-spec` turns the current conversation into an issue-tracker spec.
+- `unslop` removes common AI writing patterns.
 
-Use an explicit update when you want to refresh one skill. Clean copies update immediately; locally modified copies require confirmation before replacement:
+See [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md) for sources, adaptations, and licenses.
 
-```sh
-./scripts/batman update unslop --target codex
-```
-
-Manual-only skills use harness-specific invocation syntax:
-
-- Codex: `$grill-me`, `$grill-with-docs`, or `$unslop`
-- Copilot CLI: `/grill-me`, `/grill-with-docs`, or `/unslop`
-
-Run the policy check directly with:
+## Checks
 
 ```sh
 ./scripts/check-skills.sh
-```
-
-Run the installer regression tests with:
-
-```sh
 sh tests/test-batman.sh
 ```
-
-## Included skills
-
-- `unslop` removes common AI writing patterns.
-- `grill-me` interviews you until a plan or design has no unresolved decisions.
-- `grill-with-docs` runs the same interview while maintaining domain language and recording qualifying architecture decisions.
-- `to-spec` turns an agreed conversation into a project issue-tracker spec without another interview.
-
-The two grill entry points share the internal `grilling` skill. `grill-with-docs` also uses `domain-modeling` and its document formats. See [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md) for sources, local adaptations, and licenses.
