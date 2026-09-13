@@ -11,16 +11,16 @@ Inspired by [Matt Pocock's skills](https://github.com/mattpocock/skills) and [ps
 Clone Batman, then run:
 
 ```sh
-./scripts/install.sh
+./scripts/batman sync
 ```
 
 With no arguments, the installer creates managed copies for both Codex and Copilot CLI. You can instead choose one installation format explicitly:
 
 ```sh
-./scripts/install.sh --target codex
-./scripts/install.sh --target copilot
-./scripts/install.sh --target portable
-./scripts/install.sh --target all
+./scripts/batman sync --target codex
+./scripts/batman sync --target copilot
+./scripts/batman sync --target portable
+./scripts/batman sync --target all
 ```
 
 `all` is the default and installs the `codex` and `copilot` targets. The destinations are:

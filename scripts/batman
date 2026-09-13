@@ -1,0 +1,116 @@
+#!/bin/sh
+
+set -eu
+
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+repo_dir=$(CDPATH= cd -- "$script_dir/.." && pwd)
+
+# shellcheck source=scripts/lib/batman-management.sh
+. "$script_dir/lib/batman-management.sh"
+
+usage() {
+    printf '%s\n' "Usage: $0 status [--target codex|copilot|portable|all]"
+    printf '%s\n' "       $0 enable <skill> [--target codex|copilot|portable|all]"
+    printf '%s\n' "       $0 disable <skill> [--target codex|copilot|portable|all]"
+    printf '%s\n' "       $0 sync [--target codex|copilot|portable|all]"
+}
+
+parse_target() {
+    target=all
+    while [ "$#" -gt 0 ]; do
+        case $1 in
+            --target)
+                if [ "$#" -lt 2 ]; then
+                    printf '%s\n' 'batman: --target requires a value' >&2
+                    return 2
+                fi
+                target=$2
+                shift 2
+                ;;
+            --target=*)
+                target=${1#--target=}
+                shift
+                ;;
+            -h|--help)
+                usage
+                exit 0
+                ;;
+            *)
+                printf 'batman: unknown argument: %s\n' "$1" >&2
+                return 2
+                ;;
+        esac
+    done
+
+    validate_target "$target" || return 2
+}
+
+run_status() {
+    target=$1
+    printf '%-18s %-16s %-12s %-12s %s\n' Skill Target Invocation 'Local state' Update
+    while IFS= read -r target_name; do
+        status_target "$target_name"
+    done <<EOF
+$(target_list "$target")
+EOF
+}
+
+run_invocation_change() {
+    invocation=$1
+    skill_name=$2
+    target=$3
+    validate_skill "$skill_name" || return 2
+
+    failures=0
+    while IFS= read -r target_name; do
+        if ! set_skill_invocation "$skill_name" "$invocation" "$target_name"; then
+            failures=$((failures + 1))
+        fi
+    done <<EOF
+$(target_list "$target")
+EOF
+
+    [ "$failures" -eq 0 ]
+}
+
+case ${1:-} in
+    sync)
+        shift
+        exec "$script_dir/install.sh" "$@"
+        ;;
+    status)
+        shift
+        parse_target "$@" || {
+            usage >&2
+            exit 2
+        }
+        run_status "$target"
+        ;;
+    enable|disable)
+        command_name=$1
+        shift
+        if [ "$#" -lt 1 ]; then
+            printf 'batman: %s requires a skill name\n' "$command_name" >&2
+            usage >&2
+            exit 2
+        fi
+        skill_name=$1
+        shift
+        parse_target "$@" || {
+            usage >&2
+            exit 2
+        }
+        if [ "$command_name" = enable ]; then
+            run_invocation_change automatic "$skill_name" "$target"
+        else
+            run_invocation_change manual "$skill_name" "$target"
+        fi
+        ;;
+    -h|--help)
+        usage
+        ;;
+    *)
+        usage >&2
+        exit 2
+        ;;
+esac
