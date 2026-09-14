@@ -64,8 +64,8 @@ See [docs/skill-management.md](./docs/skill-management.md) for the state and upd
 - `grilling` contains the shared interview workflow used by the grill skills.
 - `implement` builds approved work with TDD where it fits, then reviews the result.
 - `tdd` guides test-first implementation at agreed public seams.
-- `to-spec` turns the current conversation into an issue-tracker spec.
-- `to-tickets` turns a plan or spec into dependency-aware tracer-bullet tickets.
+- `to-spec` turns the current conversation into a spec, using a configured tracker or local Markdown by default.
+- `to-tickets` turns a plan or spec into dependency-aware tracer-bullet tickets, using the same destination rules.
 - `unslop` removes common AI writing patterns.
 
 See [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md) for sources, adaptations, and licenses.

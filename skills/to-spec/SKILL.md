@@ -1,12 +1,18 @@
 ---
 name: to-spec
-description: "Turn the current conversation into a spec and publish it to the project issue tracker: no interview, just synthesis of what you've already discussed."
+description: "Turn the current conversation into a spec and publish it to the configured tracker or a local Markdown file: no interview, just synthesis of what you've already discussed."
 disable-model-invocation: true
 ---
 
 This skill takes the current conversation context and codebase understanding and produces a spec. Do NOT interview the user; just synthesize what you already know.
 
-The issue tracker and triage label vocabulary should have been provided to you. If not, tell the user to run `/setup-matt-pocock-skills`.
+Choose the publication destination in this order:
+
+1. A destination the user explicitly chooses for this run.
+2. The project's configured destination.
+3. Local Markdown at `.scratch/<feature-slug>/spec.md`.
+
+Do not replace or ignore project configuration unless the user explicitly overrides it. Missing tracker configuration is not a reason to stop or request setup.
 
 ## Process
 
@@ -16,7 +22,12 @@ The issue tracker and triage label vocabulary should have been provided to you. 
 
 Check with the user that these seams match their expectations.
 
-3. Write the spec using the template below, then publish it to the project issue tracker. Apply the `ready-for-agent` triage label - no need for additional triage.
+3. Write the spec using the template below, then publish it:
+
+- For a configured real issue tracker, follow its project instructions and triage vocabulary. Apply the status equivalent to `ready-for-agent` unless instructed otherwise.
+- For local Markdown, write `.scratch/<feature-slug>/spec.md`. Start it with `# <Spec title>` and `**Status:** ready-for-agent`, then use the template below.
+
+Do not ask the user to choose a destination when none is configured. Use local Markdown.
 
 <spec-template>
 
