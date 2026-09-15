@@ -1,6 +1,6 @@
 ---
 name: unslop
-description: Cut AI tells from any writing. Must always apply.
+description: Remove AI writing patterns from durable human-facing prose. Use for documentation, READMEs, specs, ADRs, reports, release notes, and issue or pull-request text. Do not use for ordinary chat or source code.
 disable-model-invocation: true
 ---
 
