@@ -1,0 +1,3 @@
+interface:
+  display_name: "Bro"
+  short_description: "Restate the last message in plain language"

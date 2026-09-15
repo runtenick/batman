@@ -28,9 +28,9 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-## pstack unslop
+## pstack skills
 
-`skills/unslop` is copied from [pstack](https://github.com/cursor/plugins/tree/main/pstack), using the local snapshot in `~/skills-db/pstack` on September 12, 2026. Batman keeps the canonical `SKILL.md` valid for Codex by moving manual-only invocation to `agents/openai.yaml`; the installer restores `disable-model-invocation` in Copilot's installed copy. The skill instructions are unchanged.
+`skills/unslop` is copied from [pstack](https://github.com/cursor/plugins/tree/main/pstack), using the local snapshot in `~/skills-db/pstack` on September 12, 2026. `skills/bro` was supplied from the same project by the repository owner on September 15, 2026. The skill instructions are unchanged.
 
 MIT License
 

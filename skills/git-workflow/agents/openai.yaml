@@ -1,0 +1,3 @@
+interface:
+  display_name: "Git Workflow"
+  short_description: "Apply commit standards and approval rules"
