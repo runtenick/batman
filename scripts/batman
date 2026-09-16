@@ -30,9 +30,9 @@ usage() {
     printf '%s\n' "       $0 disable <skill> [--target codex|copilot|portable|all]"
     printf '%s\n' "       $0 sync [--target codex|copilot|portable|all]"
     printf '%s\n' "       $0 update <skill> [--target codex|copilot|portable|all]"
-    printf '%s\n' "       $0 experimental list [--target codex]"
-    printf '%s\n' "       $0 experimental add <skill> [--target codex]"
-    printf '%s\n' "       $0 experimental remove <skill> [--target codex]"
+    printf '%s\n' "       $0 experimental list [--target codex|copilot|all]"
+    printf '%s\n' "       $0 experimental add <skill> [--target codex|copilot|all]"
+    printf '%s\n' "       $0 experimental remove <skill> [--target codex|copilot|all]"
 }
 
 parse_target() {
@@ -92,10 +92,32 @@ parse_experimental_target() {
         esac
     done
 
-    if [ "$target" != codex ]; then
-        printf 'batman: experimental skills currently support only the codex target\n' >&2
-        return 2
-    fi
+    case $target in
+        codex|copilot|all) ;;
+        *)
+            printf 'batman: experimental skills support codex, copilot, or all\n' >&2
+            return 2
+            ;;
+    esac
+}
+
+run_experimental_change() {
+    action=$1
+    skill_name=$2
+    requested_target=$3
+    failures=0
+
+    for target_name in $(target_list "$requested_target"); do
+        if [ "$action" = add ]; then
+            if ! add_experimental_skill "$skill_name" "$target_name"; then
+                failures=$((failures + 1))
+            fi
+        elif ! remove_experimental_skill "$skill_name" "$target_name"; then
+            failures=$((failures + 1))
+        fi
+    done
+
+    [ "$failures" -eq 0 ]
 }
 
 run_status() {
@@ -199,7 +221,7 @@ case ${1:-} in
                     usage >&2
                     exit 2
                 }
-                list_experimental_skills
+                list_experimental_skills "$target"
                 ;;
             add|remove)
                 shift
@@ -216,10 +238,8 @@ case ${1:-} in
                 }
                 if [ "$experimental_command" = add ]; then
                     "$script_dir/check-skills.sh" "$source_dir" >/dev/null
-                    add_experimental_skill "$skill_name"
-                else
-                    remove_experimental_skill "$skill_name"
                 fi
+                run_experimental_change "$experimental_command" "$skill_name" "$target"
                 ;;
             *)
                 printf 'batman: unknown experimental command: %s\n' "$experimental_command" >&2

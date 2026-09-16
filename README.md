@@ -45,16 +45,16 @@ batman status [--target codex|copilot|portable|all]
 batman enable <skill> [--target codex|copilot|portable|all]
 batman disable <skill> [--target codex|copilot|portable|all]
 batman update <skill> [--target codex|copilot|portable|all]
-batman experimental list [--target codex]
-batman experimental add <skill> [--target codex]
-batman experimental remove <skill> [--target codex]
+batman experimental list [--target codex|copilot|all]
+batman experimental add <skill> [--target codex|copilot|all]
+batman experimental remove <skill> [--target codex|copilot|all]
 ```
 
 `status` reports installation, local changes, invocation mode, and available source updates. `enable` allows automatic invocation for one installed target. `disable` returns it to manual-only. `update` refreshes one skill and asks before replacing local changes.
 
 `sync` installs missing skills and updates clean managed copies. It preserves locally modified copies and reports a conflict when both the source and installed copy changed. It also migrates symlinks created by older Batman versions when they point to this checkout.
 
-`experimental list` shows raw skills available for testing. `experimental add` installs one for Codex as manual-only. It does not change the vendored files. `experimental remove` removes the managed Codex copy and asks first if that copy has local changes. Ordinary `sync` ignores experimental skills.
+`experimental list` shows raw skills available for testing. `experimental add` installs one for Codex, Copilot, or both as manual-only. Codex is the default target. The command does not change the vendored files. `experimental remove` removes the managed copies and asks first if a copy has local changes. Ordinary `sync` ignores experimental skills.
 
 Every stable skill sets `disable-model-invocation: true`, so skills start as manual-only. Copilot and portable copies use that field for their local invocation mode. Codex copies remove the unsupported field and store the local mode as `policy.allow_implicit_invocation` in `agents/openai.yaml`.
 
@@ -83,7 +83,7 @@ See [docs/skill-management.md](./docs/skill-management.md) for the state and upd
 
 ## Experimental skills
 
-- `prototype` is an unmodified copy of Matt Pocock's skill for building throwaway logic or UI experiments. Install it with `batman experimental add prototype`.
+- `prototype` is an unmodified copy of Matt Pocock's skill for building throwaway logic or UI experiments. Install it with `batman experimental add prototype --target codex`, `--target copilot`, or `--target all`.
 
 See [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md) for sources, adaptations, and licenses.
 

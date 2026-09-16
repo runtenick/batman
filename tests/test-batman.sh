@@ -78,6 +78,9 @@ assert_contains "$output" "$skill_count installed"
 assert_contains "$output" '0 conflicts'
 [ ! -e "$codex_dir/prototype" ] || fail 'sync should not install experimental skills'
 
+run_env "$batman_script" sync --target copilot >/dev/null
+[ ! -e "$copilot_dir/prototype" ] || fail 'sync should not install experimental skills for Copilot'
+
 output=$(run_env "$batman_script" sync --target codex 2>&1)
 assert_contains "$output" "$skill_count unchanged"
 assert_contains "$output" '0 conflicts'
@@ -123,10 +126,43 @@ if output=$(run_env "$batman_script" enable prototype --target codex 2>&1); then
 fi
 assert_contains "$output" 'unknown skill: prototype'
 
-if output=$(run_env "$batman_script" experimental add prototype --target copilot 2>&1); then
-    fail 'experimental skills should reject non-Codex targets'
+output=$(run_env "$batman_script" experimental list --target all 2>&1)
+assert_contains "$output" 'prototype          codex            manual       clean        current'
+assert_contains "$output" 'prototype          copilot          manual       missing      current'
+
+output=$(run_env "$batman_script" experimental add prototype --target all 2>&1)
+assert_contains "$output" 'codex unchanged'
+assert_contains "$output" 'copilot installed'
+assert_file_contains "$copilot_dir/prototype/SKILL.md" 'disable-model-invocation: true'
+cmp "$source_dir/experimental/prototype/LOGIC.md" "$copilot_dir/prototype/LOGIC.md" >/dev/null || fail 'experimental Copilot LOGIC.md projection'
+cmp "$source_dir/experimental/prototype/UI.md" "$copilot_dir/prototype/UI.md" >/dev/null || fail 'experimental Copilot UI.md projection'
+cmp "$source_dir/experimental/prototype/agents/openai.yaml" "$copilot_dir/prototype/agents/openai.yaml" >/dev/null || fail 'experimental Copilot metadata projection'
+if grep -F 'disable-model-invocation' "$source_dir/experimental/prototype/SKILL.md" >/dev/null 2>&1; then
+    fail 'experimental Copilot add should not modify the vendored SKILL.md'
 fi
-assert_contains "$output" 'experimental skills currently support only the codex target'
+
+output=$(run_env "$batman_script" experimental list --target copilot 2>&1)
+assert_contains "$output" 'prototype          copilot          manual       clean        current'
+
+output=$(run_env "$batman_script" experimental add prototype --target copilot 2>&1)
+assert_contains "$output" 'copilot unchanged'
+invocation_count=$(grep -c '^disable-model-invocation:' "$copilot_dir/prototype/SKILL.md")
+[ "$invocation_count" -eq 1 ] || fail 'repeated Copilot add should keep one invocation field'
+
+run_env "$batman_script" sync --target copilot >/dev/null
+assert_file_contains "$copilot_dir/prototype/SKILL.md" 'disable-model-invocation: true'
+
+output=$(run_env "$batman_script" experimental remove prototype --target copilot 2>&1)
+assert_contains "$output" 'copilot removed'
+[ ! -e "$copilot_dir/prototype" ] || fail 'experimental remove should delete the managed Copilot copy'
+if grep -F 'prototype' "$copilot_dir/.batman/state.tsv" >/dev/null 2>&1; then
+    fail 'experimental remove should clear Copilot skill state'
+fi
+
+if output=$(run_env "$batman_script" experimental add prototype --target portable 2>&1); then
+    fail 'experimental skills should reject the portable target'
+fi
+assert_contains "$output" 'experimental skills support codex, copilot, or all'
 
 run_env "$batman_script" sync --target codex >/dev/null
 assert_file_contains "$codex_dir/prototype/agents/openai.yaml" 'allow_implicit_invocation: false'
