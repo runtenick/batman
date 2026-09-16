@@ -30,6 +30,9 @@ usage() {
     printf '%s\n' "       $0 disable <skill> [--target codex|copilot|portable|all]"
     printf '%s\n' "       $0 sync [--target codex|copilot|portable|all]"
     printf '%s\n' "       $0 update <skill> [--target codex|copilot|portable|all]"
+    printf '%s\n' "       $0 experimental list [--target codex]"
+    printf '%s\n' "       $0 experimental add <skill> [--target codex]"
+    printf '%s\n' "       $0 experimental remove <skill> [--target codex]"
 }
 
 parse_target() {
@@ -60,6 +63,39 @@ parse_target() {
     done
 
     validate_target "$target" || return 2
+}
+
+parse_experimental_target() {
+    target=codex
+    while [ "$#" -gt 0 ]; do
+        case $1 in
+            --target)
+                if [ "$#" -lt 2 ]; then
+                    printf '%s\n' 'batman: --target requires a value' >&2
+                    return 2
+                fi
+                target=$2
+                shift 2
+                ;;
+            --target=*)
+                target=${1#--target=}
+                shift
+                ;;
+            -h|--help)
+                usage
+                exit 0
+                ;;
+            *)
+                printf 'batman: unknown argument: %s\n' "$1" >&2
+                return 2
+                ;;
+        esac
+    done
+
+    if [ "$target" != codex ]; then
+        printf 'batman: experimental skills currently support only the codex target\n' >&2
+        return 2
+    fi
 }
 
 run_status() {
@@ -152,6 +188,45 @@ case ${1:-} in
             exit 2
         }
         run_update "$skill_name" "$target"
+        ;;
+    experimental)
+        shift
+        experimental_command=${1:-}
+        case $experimental_command in
+            list)
+                shift
+                parse_experimental_target "$@" || {
+                    usage >&2
+                    exit 2
+                }
+                list_experimental_skills
+                ;;
+            add|remove)
+                shift
+                if [ "$#" -lt 1 ]; then
+                    printf 'batman: experimental %s requires a skill name\n' "$experimental_command" >&2
+                    usage >&2
+                    exit 2
+                fi
+                skill_name=$1
+                shift
+                parse_experimental_target "$@" || {
+                    usage >&2
+                    exit 2
+                }
+                if [ "$experimental_command" = add ]; then
+                    "$script_dir/check-skills.sh" "$source_dir" >/dev/null
+                    add_experimental_skill "$skill_name"
+                else
+                    remove_experimental_skill "$skill_name"
+                fi
+                ;;
+            *)
+                printf 'batman: unknown experimental command: %s\n' "$experimental_command" >&2
+                usage >&2
+                exit 2
+                ;;
+        esac
         ;;
     -h|--help)
         usage

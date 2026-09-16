@@ -4,6 +4,7 @@
 . "$script_dir/lib/batman-state.sh"
 
 source_dir=${BATMAN_SOURCE_DIR:-"$repo_dir/skills"}
+experimental_source_dir="$source_dir/experimental"
 codex_destination_dir=${BATMAN_CODEX_SKILLS_DIR:-${BATMAN_SKILLS_DIR:-"$HOME/.agents/skills"}}
 copilot_destination_dir=${BATMAN_COPILOT_SKILLS_DIR:-"$HOME/.copilot/skills"}
 portable_destination_dir=${BATMAN_PORTABLE_SKILLS_DIR:-${BATMAN_SKILLS_DIR:-"$HOME/.agents/skills"}}
@@ -39,15 +40,44 @@ managed_hash() {
                     ;;
                 ./agents/openai.yaml)
                     normalized_hash=$(awk '
-                        BEGIN { in_policy = 0 }
+                        function reset_policy() {
+                            delete policy_lines
+                            policy_line_count = 0
+                            policy_content_count = 0
+                            policy_header = ""
+                        }
+                        function flush_policy(    line_number) {
+                            if (policy_content_count > 0) {
+                                print policy_header
+                                for (line_number = 1; line_number <= policy_line_count; line_number++) {
+                                    print policy_lines[line_number]
+                                }
+                            }
+                            reset_policy()
+                        }
                         /^policy:[[:space:]]*(#.*)?$/ {
                             in_policy = 1
+                            policy_header = $0
                             next
                         }
                         in_policy && /^[^[:space:]#]/ {
+                            flush_policy()
                             in_policy = 0
                         }
-                        !in_policy { print }
+                        in_policy && /^[[:space:]]+allow_implicit_invocation:[[:space:]]*/ { next }
+                        in_policy {
+                            policy_lines[++policy_line_count] = $0
+                            if ($0 !~ /^[[:space:]]*$/) {
+                                policy_content_count++
+                            }
+                            next
+                        }
+                        { print }
+                        END {
+                            if (in_policy) {
+                                flush_policy()
+                            }
+                        }
                     ' "$relative_path" | hash_stdin)
                     ;;
                 *)
@@ -137,7 +167,7 @@ write_codex_invocation() {
             in_policy && /^[^[:space:]#]/ {
                 in_policy = 0
             }
-            in_policy { next }
+            in_policy && /^[[:space:]]+allow_implicit_invocation:[[:space:]]*/ { next }
             { print }
             END {
                 if (!found_policy) {
@@ -376,17 +406,205 @@ validate_target() {
 validate_skill() {
     skill_name=$1
 
+    validate_skill_name "$skill_name" || return 1
+
+    if [ ! -f "$source_dir/$skill_name/SKILL.md" ]; then
+        printf 'batman: unknown skill: %s\n' "$skill_name" >&2
+        return 1
+    fi
+}
+
+validate_skill_name() {
+    skill_name=$1
+
     case $skill_name in
         ''|.|..|*/*)
             printf 'batman: invalid skill name: %s\n' "$skill_name" >&2
             return 1
             ;;
     esac
+}
 
-    if [ ! -f "$source_dir/$skill_name/SKILL.md" ]; then
-        printf 'batman: unknown skill: %s\n' "$skill_name" >&2
+validate_experimental_skill() {
+    skill_name=$1
+
+    validate_skill_name "$skill_name" || return 1
+
+    if [ -f "$source_dir/$skill_name/SKILL.md" ]; then
+        printf 'batman: %s is a stable skill, not an experimental skill\n' "$skill_name" >&2
         return 1
     fi
+
+    if [ ! -f "$experimental_source_dir/$skill_name/SKILL.md" ]; then
+        printf 'batman: unknown experimental skill: %s\n' "$skill_name" >&2
+        return 1
+    fi
+}
+
+experimental_skill_state() {
+    skill_name=$1
+    skill_source="$experimental_source_dir/$skill_name"
+    destination="$codex_destination_dir/$skill_name"
+    state_file="$codex_destination_dir/.batman/state.tsv"
+    experimental_invocation=manual
+    experimental_local_state=missing
+    experimental_update_state=current
+
+    if [ -e "$destination" ] || [ -L "$destination" ]; then
+        if [ ! -d "$destination" ] || [ ! -f "$destination/.batman-source" ] || [ "$(sed -n '1p' "$destination/.batman-source")" != "$skill_source" ]; then
+            experimental_invocation=unknown
+            experimental_local_state=conflict
+            experimental_update_state=unknown
+            return
+        fi
+
+        experimental_invocation=$(existing_invocation codex "$destination")
+        previous_source_hash=$(state_get "$state_file" source-hash "$skill_name" 2>/dev/null || true)
+        previous_installed_hash=$(state_get "$state_file" installed-hash "$skill_name" 2>/dev/null || true)
+
+        if [ -z "$previous_source_hash" ] || [ -z "$previous_installed_hash" ]; then
+            experimental_local_state=untracked
+            experimental_update_state=unknown
+            return
+        fi
+
+        source_hash=$(managed_hash "$skill_source")
+        current_hash=$(managed_hash "$destination")
+        if [ "$current_hash" != "$previous_installed_hash" ]; then
+            experimental_local_state=modified
+            if [ "$source_hash" != "$previous_source_hash" ]; then
+                experimental_update_state=available
+            fi
+        elif [ "$source_hash" != "$previous_source_hash" ]; then
+            experimental_local_state=clean
+            experimental_update_state=available
+        else
+            experimental_local_state=clean
+        fi
+    fi
+}
+
+list_experimental_skills() {
+    printf '%-18s %-16s %-12s %-12s %s\n' Skill Target Invocation 'Local state' Update
+
+    [ -d "$experimental_source_dir" ] || return 0
+    for skill_dir in "$experimental_source_dir"/*; do
+        [ -d "$skill_dir" ] || continue
+        [ -f "$skill_dir/SKILL.md" ] || continue
+
+        skill_name=${skill_dir##*/}
+        experimental_skill_state "$skill_name"
+        printf '%-18s %-16s %-12s %-12s %s\n' \
+            "$skill_name" codex "$experimental_invocation" "$experimental_local_state" "$experimental_update_state"
+    done
+}
+
+add_experimental_skill() {
+    skill_name=$1
+    validate_experimental_skill "$skill_name" || return 2
+
+    skill_source="$experimental_source_dir/$skill_name"
+    destination="$codex_destination_dir/$skill_name"
+    state_file="$codex_destination_dir/.batman/state.tsv"
+    source_hash=$(managed_hash "$skill_source")
+
+    mkdir -p "$codex_destination_dir" "$management_work_dir/experimental"
+
+    if [ -e "$destination" ] || [ -L "$destination" ]; then
+        if [ ! -d "$destination" ] || [ ! -f "$destination/.batman-source" ] || [ "$(sed -n '1p' "$destination/.batman-source")" != "$skill_source" ]; then
+            printf 'codex conflict     %s already exists at %s\n' "$skill_name" "$destination" >&2
+            return 1
+        fi
+
+        current_hash=$(managed_hash "$destination")
+        previous_source_hash=$(state_get "$state_file" source-hash "$skill_name" 2>/dev/null || true)
+        previous_installed_hash=$(state_get "$state_file" installed-hash "$skill_name" 2>/dev/null || true)
+
+        if [ -z "$previous_source_hash" ] || [ -z "$previous_installed_hash" ]; then
+            write_invocation codex "$destination" manual
+            installed_hash=$(managed_hash "$destination")
+            state_set "$state_file" invocation "$skill_name" manual
+            state_set "$state_file" source-hash "$skill_name" "$source_hash"
+            state_set "$state_file" installed-hash "$skill_name" "$installed_hash"
+            printf 'codex migrated     %s (baseline recorded; existing copy preserved)\n' "$skill_name"
+            return 0
+        fi
+
+        if [ "$current_hash" != "$previous_installed_hash" ]; then
+            if [ "$source_hash" != "$previous_source_hash" ]; then
+                printf 'codex conflict     %s has local changes and a source update\n' "$skill_name" >&2
+                return 1
+            fi
+            printf 'codex preserved    %s local changes preserved\n' "$skill_name"
+            return 0
+        fi
+
+        if [ "$source_hash" = "$previous_source_hash" ]; then
+            write_invocation codex "$destination" manual
+            state_set "$state_file" invocation "$skill_name" manual
+            printf 'codex unchanged    %s\n' "$skill_name"
+            return 0
+        fi
+    fi
+
+    projection_dir="$management_work_dir/experimental/$skill_name"
+    render_update_projection "$skill_source" "$projection_dir" codex manual
+
+    if [ -e "$destination" ] || [ -L "$destination" ]; then
+        if ! replace_projection "$destination" "$projection_dir"; then
+            printf 'codex %s could not be replaced\n' "$skill_name" >&2
+            return 1
+        fi
+        action=updated
+    else
+        mv "$projection_dir" "$destination"
+        action=installed
+    fi
+
+    installed_hash=$(managed_hash "$destination")
+    state_set "$state_file" invocation "$skill_name" manual
+    state_set "$state_file" source-hash "$skill_name" "$source_hash"
+    state_set "$state_file" installed-hash "$skill_name" "$installed_hash"
+    printf 'codex %-12s %s\n' "$action" "$skill_name"
+}
+
+remove_experimental_skill() {
+    skill_name=$1
+    validate_experimental_skill "$skill_name" || return 2
+
+    skill_source="$experimental_source_dir/$skill_name"
+    destination="$codex_destination_dir/$skill_name"
+    state_file="$codex_destination_dir/.batman/state.tsv"
+
+    if [ ! -e "$destination" ] && [ ! -L "$destination" ]; then
+        state_delete_skill "$state_file" "$skill_name"
+        printf 'codex absent        %s\n' "$skill_name"
+        return 0
+    fi
+
+    if [ ! -d "$destination" ] || [ ! -f "$destination/.batman-source" ] || [ "$(sed -n '1p' "$destination/.batman-source")" != "$skill_source" ]; then
+        printf 'codex conflict     %s is not the installed experimental skill\n' "$skill_name" >&2
+        return 1
+    fi
+
+    current_hash=$(managed_hash "$destination")
+    previous_installed_hash=$(state_get "$state_file" installed-hash "$skill_name" 2>/dev/null || true)
+    if [ -z "$previous_installed_hash" ] || [ "$current_hash" != "$previous_installed_hash" ]; then
+        printf 'codex %s has local changes. Remove it? [y/N] ' "$skill_name" >&2
+        answer=
+        IFS= read -r answer || true
+        case $answer in
+            y|Y|yes|YES|Yes) ;;
+            *)
+                printf 'codex preserved    %s\n' "$skill_name"
+                return 0
+                ;;
+        esac
+    fi
+
+    rm -rf "$destination"
+    state_delete_skill "$state_file" "$skill_name"
+    printf 'codex removed       %s\n' "$skill_name"
 }
 
 status_target() {

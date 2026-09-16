@@ -61,3 +61,17 @@ state_set() {
 
     mv "$state_tmp" "$state_file"
 }
+
+state_delete_skill() {
+    state_file=$1
+    skill_name=$2
+
+    [ -f "$state_file" ] || return 0
+
+    state_dir=${state_file%/*}
+    state_tmp=$(mktemp "$state_dir/.state.tsv.XXXXXX")
+    awk -F '\t' -v wanted_skill="$skill_name" '
+        $2 != wanted_skill { print }
+    ' "$state_file" > "$state_tmp"
+    mv "$state_tmp" "$state_file"
+}

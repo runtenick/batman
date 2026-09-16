@@ -109,15 +109,44 @@ managed_hash() {
                     ;;
                 ./agents/openai.yaml)
                     normalized_hash=$(awk '
-                        BEGIN { in_policy = 0 }
+                        function reset_policy() {
+                            delete policy_lines
+                            policy_line_count = 0
+                            policy_content_count = 0
+                            policy_header = ""
+                        }
+                        function flush_policy(    line_number) {
+                            if (policy_content_count > 0) {
+                                print policy_header
+                                for (line_number = 1; line_number <= policy_line_count; line_number++) {
+                                    print policy_lines[line_number]
+                                }
+                            }
+                            reset_policy()
+                        }
                         /^policy:[[:space:]]*(#.*)?$/ {
                             in_policy = 1
+                            policy_header = $0
                             next
                         }
                         in_policy && /^[^[:space:]#]/ {
+                            flush_policy()
                             in_policy = 0
                         }
-                        !in_policy { print }
+                        in_policy && /^[[:space:]]+allow_implicit_invocation:[[:space:]]*/ { next }
+                        in_policy {
+                            policy_lines[++policy_line_count] = $0
+                            if ($0 !~ /^[[:space:]]*$/) {
+                                policy_content_count++
+                            }
+                            next
+                        }
+                        { print }
+                        END {
+                            if (in_policy) {
+                                flush_policy()
+                            }
+                        }
                     ' "$relative_path" | hash_stdin)
                     ;;
                 *)
@@ -225,8 +254,13 @@ render_codex_metadata() {
             found_policy = 1
             print
             print "  allow_implicit_invocation: " allow_implicit
+            in_policy = 1
             next
         }
+        in_policy && /^[^[:space:]#]/ {
+            in_policy = 0
+        }
+        in_policy && /^[[:space:]]+allow_implicit_invocation:[[:space:]]*/ { next }
         { print }
         END {
             if (!found_policy) {

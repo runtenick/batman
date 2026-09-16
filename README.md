@@ -1,6 +1,6 @@
 # batman
 
-Batman is an experimental manager for a personal collection of AI-agent skills. The repository keeps one canonical copy of each skill and installs adjusted copies for Codex, GitHub Copilot CLI, or a portable target.
+Batman is an experimental manager for a personal collection of AI-agent skills. Stable skills live under `skills/` and install as adjusted copies for Codex, GitHub Copilot CLI, or a portable target. Raw third-party trials live under `skills/experimental/` and require an explicit install command.
 
 It grows through personal use and does not promise a stable command or skill catalog.
 
@@ -45,13 +45,18 @@ batman status [--target codex|copilot|portable|all]
 batman enable <skill> [--target codex|copilot|portable|all]
 batman disable <skill> [--target codex|copilot|portable|all]
 batman update <skill> [--target codex|copilot|portable|all]
+batman experimental list [--target codex]
+batman experimental add <skill> [--target codex]
+batman experimental remove <skill> [--target codex]
 ```
 
 `status` reports installation, local changes, invocation mode, and available source updates. `enable` allows automatic invocation for one installed target. `disable` returns it to manual-only. `update` refreshes one skill and asks before replacing local changes.
 
 `sync` installs missing skills and updates clean managed copies. It preserves locally modified copies and reports a conflict when both the source and installed copy changed. It also migrates symlinks created by older Batman versions when they point to this checkout.
 
-Every canonical skill sets `disable-model-invocation: true`, so skills start as manual-only. Copilot and portable copies use that field for their local invocation mode. Codex copies remove the unsupported field and store the local mode as `policy.allow_implicit_invocation` in `agents/openai.yaml`.
+`experimental list` shows raw skills available for testing. `experimental add` installs one for Codex as manual-only. It does not change the vendored files. `experimental remove` removes the managed Codex copy and asks first if that copy has local changes. Ordinary `sync` ignores experimental skills.
+
+Every stable skill sets `disable-model-invocation: true`, so skills start as manual-only. Copilot and portable copies use that field for their local invocation mode. Codex copies remove the unsupported field and store the local mode as `policy.allow_implicit_invocation` in `agents/openai.yaml`.
 
 To apply the Git standards and approval rules automatically, enable the Git workflow skill after syncing:
 
@@ -75,6 +80,10 @@ See [docs/skill-management.md](./docs/skill-management.md) for the state and upd
 - `to-tickets` turns a plan or spec into dependency-aware tracer-bullet tickets, using the same destination rules.
 - `bro` restates the last message in plain language.
 - `unslop` removes common AI writing patterns.
+
+## Experimental skills
+
+- `prototype` is an unmodified copy of Matt Pocock's skill for building throwaway logic or UI experiments. Install it with `batman experimental add prototype`.
 
 See [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md) for sources, adaptations, and licenses.
 

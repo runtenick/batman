@@ -28,7 +28,9 @@ The records mean:
 - `source-hash` identifies the canonical skill content used for the last synchronization.
 - `installed-hash` identifies the last installed content, excluding generated invocation metadata.
 
-The invocation preference is local state. Batman's canonical skills remain manual-only by default, and a local automatic setting must not be written back into the repository.
+The invocation preference is local state. Batman's stable skills remain manual-only by default, and a local automatic setting must not be written back into the repository.
+
+Experimental skills use the same state file after the owner adds them. Their source path points into `skills/experimental/`, and their installed Codex projection always starts manual-only.
 
 The hashes allow the manager to distinguish these cases:
 
@@ -48,6 +50,9 @@ The user-facing entry point is `./scripts/batman`. The installer can also place 
 ./scripts/batman disable <skill> [--target codex|copilot|portable|all]
 ./scripts/batman sync [--target codex|copilot|portable|all]
 ./scripts/batman update <skill> [--target codex|copilot|portable|all]
+./scripts/batman experimental list [--target codex]
+./scripts/batman experimental add <skill> [--target codex]
+./scripts/batman experimental remove <skill> [--target codex]
 ```
 
 `all` is the default target when the command can safely operate on every configured destination.
@@ -87,6 +92,14 @@ The command also regenerates the target's invocation metadata so the active harn
 ### `update`
 
 `update <skill>` handles one skill explicitly. If the installed copy is clean, it updates it. If it has local changes, it shows the conflict before asking for permission to replace the copy.
+
+### `experimental`
+
+Experimental skills are raw copies of third-party sources under `skills/experimental/<name>`. `sources.tsv` pins each copy to a repository, commit, upstream path, and content hash. The repository check rejects any drift, including extra files. If an upstream skill does not supply `agents/openai.yaml`, Batman may add that file and records its origin in the manifest.
+
+`experimental list` reports the available experiments and their Codex installation state. `experimental add <skill>` installs or refreshes one experiment for Codex. The installed copy adds `policy.allow_implicit_invocation: false`, while the vendored files remain unchanged. `experimental remove <skill>` removes only a copy managed from the matching experimental source. It asks before removing local changes.
+
+Experimental commands support the Codex target only. Ordinary `sync`, `status`, `enable`, `disable`, and `update` continue to manage stable skills only. Promoting an experiment into `skills/<name>` is a separate repository change after real use supports adaptation.
 
 ## Migration
 

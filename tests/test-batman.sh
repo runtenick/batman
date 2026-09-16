@@ -58,10 +58,25 @@ run_env() {
 printf '%s\n' 'Checking canonical skill policies...'
 "$check_script" >/dev/null
 
+printf '%s\n' 'Checking experimental source integrity...'
+cp "$source_dir/experimental/prototype/SKILL.md" "$test_root/prototype-SKILL.md"
+printf '%s\n' 'source drift' >> "$source_dir/experimental/prototype/SKILL.md"
+if "$check_script" "$source_dir" >/dev/null 2>&1; then
+    fail 'experimental source drift should fail validation'
+fi
+if output=$(run_env "$batman_script" experimental add prototype 2>&1); then
+    fail 'experimental add should reject source drift'
+fi
+assert_contains "$output" 'differs from its pinned raw source'
+[ ! -e "$codex_dir/prototype" ] || fail 'rejected experimental add should not install the skill'
+cp "$test_root/prototype-SKILL.md" "$source_dir/experimental/prototype/SKILL.md"
+"$check_script" "$source_dir" >/dev/null
+
 printf '%s\n' 'Testing fresh and repeat synchronization...'
 output=$(run_env "$batman_script" sync --target codex 2>&1)
 assert_contains "$output" "$skill_count installed"
 assert_contains "$output" '0 conflicts'
+[ ! -e "$codex_dir/prototype" ] || fail 'sync should not install experimental skills'
 
 output=$(run_env "$batman_script" sync --target codex 2>&1)
 assert_contains "$output" "$skill_count unchanged"
@@ -78,6 +93,55 @@ assert_contains "$output" 'unslop             codex            automatic    clea
 
 run_env "$batman_script" disable unslop --target codex >/dev/null
 assert_file_contains "$codex_dir/unslop/agents/openai.yaml" 'allow_implicit_invocation: false'
+
+printf '%s\n' 'Testing explicit experimental skill management...'
+output=$(run_env "$batman_script" experimental list 2>&1)
+assert_contains "$output" 'prototype          codex            manual       missing      current'
+
+output=$(run_env "$batman_script" experimental add prototype 2>&1)
+assert_contains "$output" 'codex installed'
+cmp "$source_dir/experimental/prototype/SKILL.md" "$codex_dir/prototype/SKILL.md" >/dev/null || fail 'experimental SKILL.md projection'
+assert_file_contains "$codex_dir/prototype/agents/openai.yaml" 'display_name: "Prototype"'
+assert_file_contains "$codex_dir/prototype/agents/openai.yaml" 'allow_implicit_invocation: false'
+if grep -F 'allow_implicit_invocation' "$source_dir/experimental/prototype/agents/openai.yaml" >/dev/null 2>&1; then
+    fail 'experimental add should not modify vendored metadata'
+fi
+
+output=$(run_env "$batman_script" experimental add prototype 2>&1)
+assert_contains "$output" 'codex unchanged'
+output=$(run_env "$batman_script" experimental list 2>&1)
+assert_contains "$output" 'prototype          codex            manual       clean        current'
+
+cp "$codex_dir/prototype/agents/openai.yaml" "$test_root/prototype-openai.yaml"
+printf '%s\n' '  custom_policy: true' >> "$codex_dir/prototype/agents/openai.yaml"
+output=$(run_env "$batman_script" experimental list 2>&1)
+assert_contains "$output" 'prototype          codex            manual       modified     current'
+cp "$test_root/prototype-openai.yaml" "$codex_dir/prototype/agents/openai.yaml"
+
+if output=$(run_env "$batman_script" enable prototype --target codex 2>&1); then
+    fail 'stable invocation commands should reject experimental skills'
+fi
+assert_contains "$output" 'unknown skill: prototype'
+
+if output=$(run_env "$batman_script" experimental add prototype --target copilot 2>&1); then
+    fail 'experimental skills should reject non-Codex targets'
+fi
+assert_contains "$output" 'experimental skills currently support only the codex target'
+
+run_env "$batman_script" sync --target codex >/dev/null
+assert_file_contains "$codex_dir/prototype/agents/openai.yaml" 'allow_implicit_invocation: false'
+
+printf '%s\n' 'local experiment edit' >> "$codex_dir/prototype/UI.md"
+output=$(printf 'n\n' | run_env "$batman_script" experimental remove prototype 2>&1)
+assert_contains "$output" 'codex preserved'
+[ -d "$codex_dir/prototype" ] || fail 'declined experimental removal should preserve the skill'
+
+output=$(printf 'y\n' | run_env "$batman_script" experimental remove prototype 2>&1)
+assert_contains "$output" 'codex removed'
+[ ! -e "$codex_dir/prototype" ] || fail 'experimental remove should delete the managed copy'
+if grep -F 'prototype' "$codex_dir/.batman/state.tsv" >/dev/null 2>&1; then
+    fail 'experimental remove should clear skill state'
+fi
 
 printf '%s\n' 'Testing local changes and conflict detection...'
 printf '%s\n' 'local edit' >> "$codex_dir/unslop/SKILL.md"
