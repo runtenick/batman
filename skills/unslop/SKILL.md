@@ -1,7 +1,7 @@
 ---
 name: unslop
-description: Remove AI writing patterns from durable human-facing prose. Use for documentation, READMEs, specs, ADRs, reports, release notes, and issue or pull-request text. Do not use for ordinary chat or source code.
-disable-model-invocation: true
+description: Remove AI writing patterns from durable human-facing prose. Use for documentation, READMEs, specs, ADRs, reports, release notes, and issue or pull-request text and SKILL.md files. Do not use for ordinary chat or source code.
+disable-model-invocation: false
 ---
 
 # Unslop
