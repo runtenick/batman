@@ -25,7 +25,17 @@ To install skills without the command link, or to choose one target:
 ./scripts/batman sync --target portable
 ```
 
-`all` is the default target. It means Codex and Copilot, not portable.
+`all` means Codex and Copilot, not portable. For `batman` commands, omitting `--target` uses the configured default profile, if set. Otherwise Batman selects the only detected agent or prompts when multiple agents are detected. Batman detects Codex and Copilot from their CLI commands or existing managed skill installs. In non-interactive use without a configured profile, pass `--target` when multiple agents are available. If it detects no agents, standard commands default to `all` and experimental commands default to Codex. The direct `scripts/install.sh` command keeps its default of installing both.
+
+Set a default profile to skip the prompt on future commands:
+
+```sh
+batman config set default-profile codex
+batman config get default-profile
+batman config unset default-profile
+```
+
+When a default profile is set, specify `--target copilot` (or another supported target) to use a different target for one command. Batman stores the profile in `$XDG_CONFIG_HOME/batman/default-profile`, or `~/.config/batman/default-profile` when `XDG_CONFIG_HOME` is unset.
 
 | Target | Default destination |
 | --- | --- |
@@ -48,13 +58,16 @@ batman update <skill> [--target codex|copilot|portable|all]
 batman experimental list [--target codex|copilot|all]
 batman experimental add <skill> [--target codex|copilot|all]
 batman experimental remove <skill> [--target codex|copilot|all]
+batman config get default-profile
+batman config set default-profile <codex|copilot>
+batman config unset default-profile
 ```
 
 `status` reports installation, local changes, invocation mode, and available source updates. `enable` allows automatic invocation for one installed target. `disable` returns it to manual-only. `update` refreshes one skill and asks before replacing local changes.
 
 `sync` installs missing skills and updates clean managed copies. It preserves locally modified copies and reports a conflict when both the source and installed copy changed. It also migrates symlinks created by older Batman versions when they point to this checkout.
 
-`experimental list` shows raw skills available for testing. `experimental add` installs one for Codex, Copilot, or both as manual-only. Codex is the default target. The command does not change the vendored files. `experimental remove` removes the managed copies and asks first if a copy has local changes. Ordinary `sync` ignores experimental skills.
+`experimental list` shows raw skills available for testing. `experimental add` installs one for Codex, Copilot, or both as manual-only. When `--target` is omitted, it follows the detected-agent behavior above. The command does not change the vendored files. `experimental remove` removes the managed copies and asks first if a copy has local changes. Ordinary `sync` ignores experimental skills.
 
 Every stable skill sets `disable-model-invocation: true`, so skills start as manual-only. Copilot and portable copies use that field for their local invocation mode. Codex copies remove the unsupported field and store the local mode as `policy.allow_implicit_invocation` in `agents/openai.yaml`.
 

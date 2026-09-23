@@ -8,7 +8,6 @@ source_dir=${1:-"$repo_dir/skills"}
 
 errors=0
 skills_checked=0
-experimental_skills_checked=0
 
 hash_stdin() {
     if command -v sha256sum >/dev/null 2>&1; then
@@ -126,8 +125,6 @@ if [ -d "$experimental_dir" ]; then
                 ''|'#'*) continue ;;
             esac
 
-            experimental_skills_checked=$((experimental_skills_checked + 1))
-
             case $skill_name in
                 *[!a-z0-9-]*|-*|*-)
                     printf 'invalid  experimental skill name: %s\n' "$skill_name" >&2
@@ -233,9 +230,4 @@ fi
 
 if [ "$errors" -ne 0 ]; then
     exit 1
-fi
-
-printf 'All stable Batman skills have an explicit portable invocation policy.\n'
-if [ "$experimental_skills_checked" -gt 0 ]; then
-    printf 'All experimental Batman skills match their pinned source hashes.\n'
 fi

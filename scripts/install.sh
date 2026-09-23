@@ -78,6 +78,42 @@ unchanged=0
 preserved=0
 conflicts=0
 
+render_combined_report() {
+    codex_report=$1
+    copilot_report=$2
+
+    awk -v codex_report="$codex_report" '
+        {
+            target = FILENAME == codex_report ? "codex" : "copilot"
+            action = $2
+            detail = ""
+            for (field = 3; field <= NF; field++) {
+                detail = detail (field == 3 ? "" : " ") $field
+            }
+
+            key = action SUBSEP detail
+            if (!(key in seen)) {
+                seen[key] = 1
+                order[++count] = key
+                actions[key] = action
+                details[key] = detail
+            }
+
+            target_key = target SUBSEP key
+            if (!(target_key in target_seen)) {
+                target_seen[target_key] = 1
+                target_names[key] = target_names[key] (target_names[key] == "" ? "" : ", ") target
+            }
+        }
+        END {
+            for (entry_number = 1; entry_number <= count; entry_number++) {
+                key = order[entry_number]
+                printf "%-18s %s\n", target_names[key] " " actions[key], details[key]
+            }
+        }
+    ' "$codex_report" "$copilot_report"
+}
+
 hash_stdin() {
     if command -v sha256sum >/dev/null 2>&1; then
         sha256sum | awk '{print $1}'
@@ -479,8 +515,14 @@ case $target in
         install_target portable "$portable_destination_dir" portable
         ;;
     all)
-        install_target codex "$codex_destination_dir" codex
-        install_target copilot "$copilot_destination_dir" portable
+        codex_report="$projection_work_dir/codex.report"
+        copilot_report="$projection_work_dir/copilot.report"
+        codex_errors="$projection_work_dir/codex.errors"
+        copilot_errors="$projection_work_dir/copilot.errors"
+        install_target codex "$codex_destination_dir" codex >"$codex_report" 2>"$codex_errors"
+        install_target copilot "$copilot_destination_dir" portable >"$copilot_report" 2>"$copilot_errors"
+        render_combined_report "$codex_report" "$copilot_report"
+        render_combined_report "$codex_errors" "$copilot_errors" >&2
         ;;
     esac
 
@@ -488,7 +530,7 @@ if [ "$install_command" -eq 1 ]; then
     install_cli_command
 fi
 
-printf '\n%d installed, %d updated, %d unchanged, %d preserved, %d conflicts\n' "$installed" "$updated" "$unchanged" "$preserved" "$conflicts"
+printf '\n%d installed, %d updated, %d unchanged, %d preserved, %d conflicts (per target)\n' "$installed" "$updated" "$unchanged" "$preserved" "$conflicts"
 
 if [ "$conflicts" -ne 0 ]; then
     exit 1

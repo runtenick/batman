@@ -53,9 +53,14 @@ The user-facing entry point is `./scripts/batman`. The installer can also place 
 ./scripts/batman experimental list [--target codex|copilot|all]
 ./scripts/batman experimental add <skill> [--target codex|copilot|all]
 ./scripts/batman experimental remove <skill> [--target codex|copilot|all]
+./scripts/batman config get default-profile
+./scripts/batman config set default-profile <codex|copilot>
+./scripts/batman config unset default-profile
 ```
 
-`all` is the default target when the command can safely operate on every configured destination.
+`all` explicitly selects Codex and Copilot. `config set default-profile codex|copilot` chooses the target Batman uses when `--target` is omitted; the profile is stored at `$XDG_CONFIG_HOME/batman/default-profile` or `~/.config/batman/default-profile`. Use `config get default-profile` to display it and `config unset default-profile` to clear it. With a default profile set, Batman never prompts: pass `--target` to use another target for one command.
+
+Without a configured profile, Batman selects the only detected agent or prompts when it detects multiple agents. Detection checks for the CLI command or an existing Batman-managed skill installation. In non-interactive use with multiple detected agents, pass `--target`. If no agents are detected, stable commands keep their `all` default and experimental commands keep their Codex default. The direct `scripts/install.sh` command is unchanged and keeps its default of installing both.
 
 ### `status`
 
@@ -88,6 +93,8 @@ The command also regenerates the target's invocation metadata so the active harn
 ### `sync`
 
 `sync` adds missing skills and updates installed skills that have not been locally modified. It preserves local invocation preferences, reports local modifications, and does not overwrite conflicts.
+
+When syncing all targets, identical outcomes are grouped onto one row per skill with the targets listed together. Different outcomes remain on separate target-specific rows. The summary counts operations per target.
 
 ### `update`
 

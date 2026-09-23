@@ -18,6 +18,8 @@ done
 
 script_dir=$(CDPATH= cd -- "$(dirname -- "$script_path")" && pwd)
 repo_dir=$(CDPATH= cd -- "$script_dir/.." && pwd)
+batman_config_dir=${XDG_CONFIG_HOME:-"$HOME/.config"}/batman
+default_profile_file="$batman_config_dir/default-profile"
 
 # shellcheck source=scripts/lib/batman-management.sh
 . "$script_dir/lib/batman-management.sh"
@@ -33,10 +35,163 @@ usage() {
     printf '%s\n' "       $0 experimental list [--target codex|copilot|all]"
     printf '%s\n' "       $0 experimental add <skill> [--target codex|copilot|all]"
     printf '%s\n' "       $0 experimental remove <skill> [--target codex|copilot|all]"
+    printf '%s\n' "       $0 config get default-profile"
+    printf '%s\n' "       $0 config set default-profile <codex|copilot>"
+    printf '%s\n' "       $0 config unset default-profile"
+}
+
+get_default_profile() {
+    [ -f "$default_profile_file" ] || return 1
+
+    configured_profile=$(sed -n '1p' "$default_profile_file")
+    case $configured_profile in
+        codex|copilot)
+            printf '%s\n' "$configured_profile"
+            ;;
+        *)
+            printf 'batman: invalid default profile in %s; expected codex or copilot\n' "$default_profile_file" >&2
+            return 2
+            ;;
+    esac
+}
+
+set_default_profile() {
+    new_default_profile=$1
+    case $new_default_profile in
+        codex|copilot) ;;
+        *)
+            printf '%s\n' 'batman: default profile must be codex or copilot' >&2
+            return 2
+            ;;
+    esac
+
+    mkdir -p "$batman_config_dir"
+    config_tmp=$(mktemp "$batman_config_dir/default-profile.XXXXXX") || return 1
+    if ! (umask 077; printf '%s\n' "$new_default_profile" > "$config_tmp"); then
+        rm -f "$config_tmp"
+        return 1
+    fi
+    if ! mv -f "$config_tmp" "$default_profile_file"; then
+        rm -f "$config_tmp"
+        return 1
+    fi
+
+    printf 'Default profile set to %s.\n' "$new_default_profile"
+}
+
+unset_default_profile() {
+    if [ -f "$default_profile_file" ]; then
+        rm -f "$default_profile_file"
+        printf '%s\n' 'Default profile cleared.'
+    else
+        printf '%s\n' 'No default profile is set.'
+    fi
+}
+
+agent_target_available() {
+    agent_name=$1
+    case $agent_name in
+        codex)
+            cli_name=codex
+            agent_destination_dir=$codex_destination_dir
+            ;;
+        copilot)
+            cli_name=copilot
+            agent_destination_dir=$copilot_destination_dir
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+
+    if command -v "$cli_name" >/dev/null 2>&1 || [ -f "$agent_destination_dir/.batman/state.tsv" ]; then
+        return 0
+    fi
+
+    for source_skill in "$source_dir"/* "$experimental_source_dir"/*; do
+        [ -d "$source_skill" ] || continue
+        [ -f "$source_skill/SKILL.md" ] || continue
+        installed_skill="$agent_destination_dir/${source_skill##*/}"
+
+        if [ -f "$installed_skill/.batman-source" ] && [ "$(sed -n '1p' "$installed_skill/.batman-source")" = "$source_skill" ]; then
+            return 0
+        fi
+        if [ -L "$installed_skill" ] && [ "$(readlink "$installed_skill")" = "$source_skill" ]; then
+            return 0
+        fi
+    done
+
+    return 1
+}
+
+resolve_implicit_target() {
+    default_target=$1
+
+    if configured_profile=$(get_default_profile); then
+        target=$configured_profile
+        return 0
+    else
+        profile_status=$?
+        [ "$profile_status" -eq 1 ] || return "$profile_status"
+    fi
+
+    available_count=0
+    first_available=
+    second_available=
+
+    for agent_name in codex copilot; do
+        if agent_target_available "$agent_name"; then
+            available_count=$((available_count + 1))
+            if [ "$available_count" -eq 1 ]; then
+                first_available=$agent_name
+            else
+                second_available=$agent_name
+            fi
+        fi
+    done
+
+    case $available_count in
+        0)
+            target=$default_target
+            ;;
+        1)
+            target=$first_available
+            ;;
+        *)
+            if [ ! -t 0 ] || [ ! -r /dev/tty ]; then
+                printf '%s\n' 'batman: multiple agents are available; specify --target codex, --target copilot, or --target all' >&2
+                return 2
+            fi
+
+            printf '%s\n' 'Multiple agents are available. Select one for this command:' >/dev/tty
+            printf '  1) %s\n  2) %s\n' "$first_available" "$second_available" >/dev/tty
+            while :; do
+                printf 'Select [1-2]: ' >/dev/tty
+                if ! IFS= read -r selection </dev/tty; then
+                    printf '\n' >/dev/tty
+                    return 2
+                fi
+                case $selection in
+                    1)
+                        target=$first_available
+                        return 0
+                        ;;
+                    2)
+                        target=$second_available
+                        return 0
+                        ;;
+                    *)
+                        printf '%s\n' 'Enter 1 or 2.' >/dev/tty
+                        ;;
+                esac
+            done
+            ;;
+    esac
 }
 
 parse_target() {
     target=all
+    target_specified=0
     while [ "$#" -gt 0 ]; do
         case $1 in
             --target)
@@ -45,10 +200,12 @@ parse_target() {
                     return 2
                 fi
                 target=$2
+                target_specified=1
                 shift 2
                 ;;
             --target=*)
                 target=${1#--target=}
+                target_specified=1
                 shift
                 ;;
             -h|--help)
@@ -61,12 +218,17 @@ parse_target() {
                 ;;
         esac
     done
+
+    if [ "$target_specified" -eq 0 ]; then
+        resolve_implicit_target all || return 2
+    fi
 
     validate_target "$target" || return 2
 }
 
 parse_experimental_target() {
     target=codex
+    target_specified=0
     while [ "$#" -gt 0 ]; do
         case $1 in
             --target)
@@ -75,10 +237,12 @@ parse_experimental_target() {
                     return 2
                 fi
                 target=$2
+                target_specified=1
                 shift 2
                 ;;
             --target=*)
                 target=${1#--target=}
+                target_specified=1
                 shift
                 ;;
             -h|--help)
@@ -91,6 +255,10 @@ parse_experimental_target() {
                 ;;
         esac
     done
+
+    if [ "$target_specified" -eq 0 ]; then
+        resolve_implicit_target codex || return 2
+    fi
 
     case $target in
         codex|copilot|all) ;;
@@ -164,9 +332,60 @@ run_update() {
 }
 
 case ${1:-} in
+    config)
+        shift
+        config_action=${1:-}
+        case $config_action in
+            get)
+                shift
+                if [ "${1:-}" != default-profile ] || [ "$#" -ne 1 ]; then
+                    printf '%s\n' 'batman: expected config get default-profile' >&2
+                    usage >&2
+                    exit 2
+                fi
+                if configured_profile=$(get_default_profile); then
+                    printf '%s\n' "$configured_profile"
+                else
+                    profile_status=$?
+                    if [ "$profile_status" -eq 1 ]; then
+                        printf '%s\n' 'No default profile is set.'
+                    else
+                        exit "$profile_status"
+                    fi
+                fi
+                ;;
+            set)
+                shift
+                if [ "${1:-}" != default-profile ] || [ "$#" -ne 2 ]; then
+                    printf '%s\n' 'batman: expected config set default-profile <codex|copilot>' >&2
+                    usage >&2
+                    exit 2
+                fi
+                set_default_profile "$2"
+                ;;
+            unset)
+                shift
+                if [ "${1:-}" != default-profile ] || [ "$#" -ne 1 ]; then
+                    printf '%s\n' 'batman: expected config unset default-profile' >&2
+                    usage >&2
+                    exit 2
+                fi
+                unset_default_profile
+                ;;
+            *)
+                printf 'batman: unknown config command: %s\n' "$config_action" >&2
+                usage >&2
+                exit 2
+                ;;
+        esac
+        ;;
     sync)
         shift
-        exec "$script_dir/install.sh" "$@"
+        parse_target "$@" || {
+            usage >&2
+            exit 2
+        }
+        exec "$script_dir/install.sh" --target "$target"
         ;;
     status)
         shift
