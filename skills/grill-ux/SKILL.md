@@ -1,46 +1,76 @@
 ---
 name: grill-ux
-description: Interview the user to turn a vague feature idea into a shared UX design for exploring interactive UI alternatives with the team.
+description: Interview the user to agree on a feature's user journey, constraints, and three UI directions before prototyping.
 disable-model-invocation: true
 ---
 
 # Grill UX
 
-Reach a shared understanding of what to explore before building UI prototypes. The usual audience is the technical team and product owner. The goal is to make a feature concrete enough for discussion; agreement within the team is not evidence that users will benefit.
+Turn a vague feature idea into a shared design for three UI prototypes. Interview only. Do not build prototypes or write documents unless requested.
 
-## Ground the discussion
+## 1. Ground the interview
 
-Use the conversation and inspect the relevant app before asking about facts you can find yourself. Look for the feature's likely home, nearby interactions, components, and applicable project UI guidance or design skills. Respect those conventions unless the user explicitly wants broader exploration. Keep research proportional to the feature. Do not introduce delegation unless the user asks for it.
+Read the conversation and inspect the relevant page, nearby components, and project UI instructions or design skills. Find facts yourself; ask the user for decisions. Follow existing design conventions unless the user explicitly wants broader exploration. Do not delegate unless requested.
 
-Establish enough of the following to make useful alternatives:
+## 2. Build the decision tree
 
-- Who is doing what, in which situation, and what currently gets in their way?
-- What benefit should the feature provide? Briefly challenge whether the proposed feature addresses that need, without turning the interview into a product strategy workshop.
-- Where does the interaction start, what decisions does the user make, and what result should they reach?
-- Where does it fit in the current app, or what surrounding context does a new UI need?
-- Which assumptions or interaction choices would be most useful for the team to examine through prototypes?
-- What belongs in the initial exploration, and what can wait?
+Organize unresolved decisions by dependency:
 
-Use Lean UX's focus on outcomes, explicit assumptions, and the smallest useful experiment. Treat claims without evidence as assumptions. A useful framing is: "We believe this interaction will help this user achieve this benefit. The prototypes should help us examine this uncertainty." Use plain language rather than requiring a canvas or formal hypothesis template.
+```text
+User + situation + current difficulty
+└── Task + intended benefit
+    ├── Core journey: entry → choices → result
+    │   └── Three interaction directions for the same outcome
+    ├── App placement + design constraints
+    └── Main uncertainty for team discussion
+        └── Minimum journey and data needed to explore it
+```
 
-## Interview in rounds
+Adapt the tree to the feature. Reuse settled answers. Mark each decision as settled, open, or deliberately left for prototype exploration.
 
-Map the decisions and their dependencies. In each round, ask the unresolved questions whose prerequisites are already settled. Number each question, explain concrete options or tradeoffs, and give a recommended answer. Wait for the user's answers before asking dependent questions. Carry settled answers forward.
+Challenge whether the feature addresses the user's need, briefly. Treat unsupported claims about user behavior as assumptions. Do not expand into product strategy, backend design, or final MVP definition.
 
-Suggest interaction approaches as you go. Help the user reason with a concrete scenario rather than requiring them to invent the design in words. For example, resolving a scheduling conflict might use a guided flow, direct calendar manipulation, or a recommendation the user can adjust.
+## 3. Ask the current frontier
 
-Keep the intended user outcome constant across the three alternatives. Let them differ in interaction approach, information hierarchy, or how the user makes a decision. If exploring different feature scopes would help, agree that explicitly and identify the differences.
+The frontier contains open decisions whose prerequisites are settled. Ask those together in a round; defer dependent questions until their prerequisites are answered.
 
-Leave questions that the prototypes should answer open. Do not resolve every detail, design backend contracts, or define the final MVP before the team has seen the alternatives. The initial build should cover one complete core journey per variant; the user can request more depth afterward.
+Use this format, continuing question numbers across rounds:
 
-## Reach shared understanding
+```text
+Q1 — Question title
+<Decision to make, with concrete options and their tradeoffs.>
 
-Stop when the user, task, intended benefit, app context, exploration boundaries, and main uncertainty are clear enough to build. Summarize the agreed design and the interaction directions in the conversation, including assumptions still open to exploration. Ask the user to confirm or correct that understanding.
+Recommendation: <Your recommended answer and why.>
 
-Produce no document by default. The usual next step is a separate `ui-prototype` invocation in the same session, possibly after compaction. Keep the conversational summary sufficient to carry the decisions forward. If a written record would help with sharing or returning later, offer a short recap document and write it only if requested.
+---
 
-End with the shared understanding. Do not start building automatically. Later MVP definition belongs to a separate standard grilling session using the prototype branch and team feedback.
+Q2 — Question title
+<Next independent decision.>
 
-## Sources
+Recommendation: <Your recommended answer and why.>
+```
 
-Adapted from Matt Pocock's [grill-me](https://github.com/mattpocock/skills), through Batman's `grilling` interview pattern, and informed by Jeff Gothelf's [Lean UX Canvas](https://jeffgothelf.com/blog/how-to-use-the-lean-ux-canvas/). This skill is self-contained; it does not load the general grilling workflow.
+Wait for answers. Update the tree, then ask the new frontier. Do not repeat settled questions or ask the user to decide things the prototypes should reveal.
+
+Propose concrete interaction directions during the interview. For scheduling, these might be a guided flow, direct calendar manipulation, and an adjustable recommendation. Hold the user outcome constant; vary how the user reaches it. Explore different feature scopes only when explicitly agreed.
+
+Bound the first build to one complete core journey per variant. Add another state or path only if it could change the team's decision. Leave room for later requests to extend the prototypes.
+
+## 4. Confirm and stop
+
+Stop questioning when the remaining open decisions can be explored through prototypes. Summarize in the conversation:
+
+```text
+User and situation: ...
+Task and intended benefit: ...
+Core journey: ...
+App placement and design constraints: ...
+Directions A / B / C: ...
+Question the prototypes should help the team discuss: ...
+In scope / deferred: ...
+Assumptions still untested: ...
+```
+
+Ask the user to confirm or correct this shared understanding. Resolve corrections, then stop. Team agreement does not validate user behavior.
+
+Keep the summary in the conversation for a separate `ui-prototype` invocation, including after compaction. Create no document by default. Offer a short recap document only when useful for sharing or returning later, and write it only if requested. Do not invoke `ui-prototype` automatically.

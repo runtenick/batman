@@ -1,55 +1,78 @@
 ---
 name: ui-prototype
-description: Build three throwaway interactive UI alternatives from an agreed design, using feature-scoped mock data for team discussion.
+description: Build three interactive UI alternatives from an agreed design, using minimal feature-scoped mocks on a throwaway branch.
 disable-model-invocation: true
 ---
 
 # UI prototype
 
-Build three inexpensive, interactive alternatives that help the team discuss a feature before defining and implementing the MVP. Work from the agreed design in the conversation, normally established with `grill-ux`, or an equivalent direction supplied by the user.
+Build three disposable alternatives for team discussion. Use the agreed design from the conversation or supplied context. Do not interview the user or require a design document. Decide small implementation details yourself. If the task and intended outcome are absent, report the missing context and stop.
 
-This is a building skill. Do not run another interview or require a brief document. Read the available context and make small implementation choices yourself. If the task or intended outcome is missing entirely, state that the design context is missing and stop without inventing a feature or starting a questionnaire.
+## 1. Locate the feature
 
-## Use the app's context
+Read the relevant code and project UI instructions or design skills. Follow the existing component library, visual language, and accessibility guidance unless broader exploration was explicitly requested.
 
-Inspect the relevant page, components, and applicable UI guidance or design skills. Follow the project's design language and conventions unless the user explicitly asks to explore beyond them. Prefer the natural host page or flow. For a new UI, create only the surrounding context needed to understand the task, using the project's conventions.
+- Existing page or flow: mount the alternatives in their natural location, preserving the surrounding app.
+- New UI with no suitable host: add a prototype page using the project's routing conventions and only the context needed for the task.
 
-Keep prototype work on a throwaway branch, following the repository's Git rules and any required permissions. Preserve unrelated work. Use the existing development setup and make the prototype easy to reach. No separate app, mock server, or new framework is needed by default.
+Use the existing development setup. Work on a throwaway branch under the repository's Git rules and required permissions. Preserve unrelated work. Do not delegate unless requested.
 
-## Mock only the feature
+## 2. Choose three distinct approaches
 
-Replace the data the feature needs with small, editable fixtures. Simulate its mutations in local memory so the user can complete the intended journey without changing live data. Keep existing login, navigation, and unrelated application dependencies as they are.
+Use the agreed directions. Fill any remaining gaps with approaches that differ in interaction, information hierarchy, or primary action. Keep the intended user outcome constant unless scope differences were explicitly agreed.
 
-For example, on a page that loads documents, substitute the relevant document data and simulate the document interactions being explored. Do not recreate the login flow or mock the rest of the app. Backend independence is not a requirement.
+State the build plan briefly, then proceed without another approval round:
 
-Use plausible content and comparable starting scenarios across the variants. Add an empty, conflicting, or other awkward case only when it helps answer the design question. A reload or simple reset should restore the starting state; build no scenario framework or persistence layer.
+```text
+Task: <what the user will accomplish>
+Host: <page or flow>
+A: <approach and tradeoff>
+B: <approach and tradeoff>
+C: <approach and tradeoff>
+```
 
-## Build three interaction alternatives
+If two alternatives differ only in styling, replace one with a different interaction approach before building.
 
-Hold the intended user outcome constant. Give each variant a distinct interaction approach, information hierarchy, or primary action. Three cosmetic variations do not explore enough. Respect any directions already agreed during grilling and choose remaining details yourself.
+## 3. Mock the feature's inputs and actions
 
-Build one complete core journey per variant: enter the feature, make the meaningful choices, and see the result. Support revision or undo when relevant to that journey. Keep all three usable enough to compare. Additional journeys and states can follow when the user asks.
+- Substitute small, editable fixtures for the data this feature uses.
+- Simulate its mutations in local memory. Do not send prototype actions to live mutation endpoints.
+- Keep existing authentication, navigation, and unrelated dependencies. Do not mock the whole app or require backend independence.
+- Start each variant from comparable, plausible data. Add awkward cases only when relevant to the exploration.
+- Restore the starting state with a reload or simple reset. Add no persistence or mock infrastructure.
 
-Reuse existing components where helpful, but keep the alternatives free to differ structurally. Avoid abstractions that make one variant expensive to change. Spend effort on understandable content, feedback, and interaction, and follow the project's accessibility guidance.
+Example: for a document interaction, replace the page's relevant document data and simulate its edits. Leave the route and login flow in place.
 
-Provide a small variant switcher and a direct way to open each alternative. A URL parameter such as `?variant=A` is a useful default when it fits the app. Keep the switcher distinct from the UI under discussion and avoid losing the ability to complete the journey when switching variants.
+## 4. Build the core journeys
 
-Name each alternative by its interaction approach and briefly explain the tradeoff it explores. Keep this rationale in the handoff or prototype controls rather than filling the feature UI with implementation notes.
+Implement each variant as a separately editable component, such as `VariantA`, `VariantB`, and `VariantC`. Reuse existing UI components and fixtures; avoid a shared layout that forces the alternatives to behave alike.
 
-## Keep the experiment cheap
+Make one journey work end to end in each variant: enter, make the meaningful choices, see the result. Include revision or undo where the task needs it. Wire the controls on that journey; do not stop at static screens.
 
-Use disposable code. Add no automated test suite, speculative architecture, backend contracts, or error handling unrelated to the journey being explored. Follow required project checks and do a quick walkthrough of the core journey in each variant using available tools. Report any interaction you could not verify.
+Spend effort on interaction, content, hierarchy, and feedback. Add no automated test suite, backend contracts, speculative abstractions, or error handling unrelated to the journey. Extend beyond the agreed exploration only when requested.
 
-Do not delegate unless the user asks for it. Do not expand the scope to make the prototype production-ready.
+## 5. Make comparison easy
 
-## Hand over for discussion
+Default to `?variant=A`, `?variant=B`, and `?variant=C` on the host route. Use the framework's router and preserve unrelated URL parameters.
 
-Give the run command, entry URL and variant links, the branch name, and a short explanation of each alternative's tradeoff. Identify relevant mocked behavior and remaining assumptions so the team knows what it is reviewing. Existing app prerequisites can remain; mention those needed to open the prototype.
+Add a small floating switcher with a labeled button for each alternative. Show the active variant and keep the switcher visually distinct from the feature. Switching should open the selected variant at its starting state, using a fresh copy of the fixtures. A reload should retain the selected variant and reset its data.
 
-Leave the alternatives available on the throwaway branch, following repository rules for any commits or pushes. Do not automatically select a winner, merge it, or implement the MVP. The user can request revisions here, then take the branch and feedback notes into a new standard grilling session to determine the actual MVP.
+Use an equivalent direct-link mechanism if query parameters do not fit the app. Keep comparison controls simple; build no reusable prototype framework.
 
-The prototype supports team alignment. User analytics and feedback after release can inform whether the eventual feature delivers the expected benefit; the prototype itself does not establish that.
+## 6. Check and hand over
 
-## Sources
+Run required project checks and walk through the core journey in each variant using available tools. Check switching and reset behavior. Report anything you could not verify; do not add a test suite for disposable code.
 
-Adapted from Matt Pocock's [prototype skill](https://github.com/mattpocock/skills/tree/959a8e9f1edc3adbe2f7e3054bb6fbefa6696260/skills/engineering/prototype), especially its structural alternatives, switcher, and disposable implementation. Informed by Jeff Gothelf's [Lean UX Canvas](https://jeffgothelf.com/blog/how-to-use-the-lean-ux-canvas/), particularly explicit assumptions and doing the least work needed for the next useful experiment.
+Return:
+
+```text
+Run: <command and any existing app prerequisites>
+Open: <entry URL and links for A / B / C>
+Branch: <throwaway branch>
+A / B / C: <one-line interaction tradeoff for each>
+Mocked: <relevant data and actions>
+Still assumed: <what team review or later user evidence must resolve>
+Verification: <what was checked and any limits>
+```
+
+Leave all alternatives available for review. Follow repository rules for commits and pushes. Do not choose a winner, merge the prototypes, or implement the MVP. Revisions can happen on request; MVP definition belongs to a later standard grilling session using the branch and team feedback.
