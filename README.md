@@ -84,8 +84,10 @@ See [docs/skill-management.md](./docs/skill-management.md) for the state and upd
 - `domain-modeling` builds a project glossary and architecture decision records.
 - `code-review` reviews a change separately against repository standards and its originating spec.
 - `grill-me` interviews the user to resolve decisions in a plan or design.
+- `grill-ux` interviews the user to agree on a feature's UX exploration before prototyping.
+- `ui-prototype` builds three interactive alternatives with feature-scoped mock data for team discussion.
 - `grill-with-docs` combines that interview with domain and architecture notes.
-- `grilling` contains the shared interview workflow used by the grill skills.
+- `grilling` contains the shared interview workflow used by `grill-me` and `grill-with-docs`.
 - `git-workflow` applies Conventional Commit standards and approval rules to Git changes.
 - `implement` builds approved work with TDD where it fits, then reviews the result.
 - `tdd` guides test-first implementation at agreed public seams.

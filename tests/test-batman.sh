@@ -155,7 +155,7 @@ assert_file_contains "$copilot_dir/prototype/SKILL.md" 'disable-model-invocation
 output=$(run_env "$batman_script" experimental remove prototype --target copilot 2>&1)
 assert_contains "$output" 'copilot removed'
 [ ! -e "$copilot_dir/prototype" ] || fail 'experimental remove should delete the managed Copilot copy'
-if grep -F 'prototype' "$copilot_dir/.batman/state.tsv" >/dev/null 2>&1; then
+if awk -F '\t' '$2 == "prototype" { found = 1 } END { exit !found }' "$copilot_dir/.batman/state.tsv"; then
     fail 'experimental remove should clear Copilot skill state'
 fi
 
@@ -175,7 +175,7 @@ assert_contains "$output" 'codex preserved'
 output=$(printf 'y\n' | run_env "$batman_script" experimental remove prototype 2>&1)
 assert_contains "$output" 'codex removed'
 [ ! -e "$codex_dir/prototype" ] || fail 'experimental remove should delete the managed copy'
-if grep -F 'prototype' "$codex_dir/.batman/state.tsv" >/dev/null 2>&1; then
+if awk -F '\t' '$2 == "prototype" { found = 1 } END { exit !found }' "$codex_dir/.batman/state.tsv"; then
     fail 'experimental remove should clear skill state'
 fi
 

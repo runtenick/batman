@@ -6,6 +6,8 @@
 
 `skills/experimental/prototype` is an unmodified copy of `skills/engineering/prototype` from the same repository at commit [`959a8e9f1edc3adbe2f7e3054bb6fbefa6696260`](https://github.com/mattpocock/skills/commit/959a8e9f1edc3adbe2f7e3054bb6fbefa6696260). Its `agents/openai.yaml` also comes from upstream. Batman records and checks the copied directory's content hash in `skills/experimental/sources.tsv`.
 
+`skills/grill-ux` adapts the interview pattern from Batman's `grilling` skill, using the Matt Pocock snapshot described above. `skills/ui-prototype` adapts the prototype skill at the pinned commit above. These custom skills focus on team discussion of UI alternatives, with a conversational design handoff and feature-scoped mock data. They are also informed by Jeff Gothelf's [Lean UX Canvas](https://jeffgothelf.com/blog/how-to-use-the-lean-ux-canvas/). The raw experimental prototype remains unchanged.
+
 Batman keeps every stable skill manual-only and lets the installer derive target-specific invocation metadata. It replaces host-specific skill calls with sibling file references where the workflow requires another included skill. The implementation skill does not commit without explicit permission, and code review keeps delegation under user control.
 
 Tracker setup references were adapted so the stable skills can use local files or an already configured tracker without requiring Matt's setup skill. Other shared instructions and supporting files remain close to the source. Batman changes only installed projections of the experimental prototype by adding target-specific manual-only invocation metadata. It does not change the vendored source.
