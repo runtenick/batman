@@ -69,7 +69,9 @@ printf '  # ignored\tmissing\t-\n' >> "$source_dir/groups.tsv"
 output=$(run_env "$batman_script" groups)
 assert_contains "$output" 'dev-workflow       grill-me'
 assert_contains "$output" 'ux                 ui-prototype'
-assert_contains "$output" 'ungrouped          unslop'
+assert_contains "$output" 'communication      bro'
+assert_contains "$output" 'communication      unslop'
+assert_contains "$output" 'ungrouped          writing-for-agents'
 
 group_codex_dir="$test_root/group-codex"
 group_copilot_dir="$test_root/group-copilot"
@@ -119,7 +121,7 @@ case $output in *implement*|*unslop*) fail 'group status included unrelated skil
 
 output=$(run_group_env "$batman_script" sync --target copilot --group dev-workflow --group=ux --group ux)
 assert_contains "$output" '2 installed, 0 updated, 9 unchanged'
-[ ! -e "$group_copilot_dir/unslop" ] || fail 'combined groups installed an ungrouped skill'
+[ ! -e "$group_copilot_dir/unslop" ] || fail 'combined groups installed a communication skill'
 run_group_env "$install_script" --group ux --target codex >/dev/null
 [ -f "$group_codex_dir/ui-prototype/SKILL.md" ] || fail 'direct installer did not select UX'
 group_portable_dir="$test_root/group-portable"
@@ -201,7 +203,8 @@ output=$(run_env "$batman_script" groups)
 assert_contains "$output" 'dev-workflow       grill-me'
 run_group_env env BATMAN_PORTABLE_SKILLS_DIR="$group_portable_dir" \
     "$install_script" --target portable >/dev/null
-[ -f "$group_portable_dir/unslop/SKILL.md" ] || fail 'manifest-free sync should install ungrouped skills'
+[ -f "$group_portable_dir/writing-for-agents/SKILL.md" ] || fail 'manifest-free sync should install ungrouped skills'
+[ -f "$group_portable_dir/unslop/SKILL.md" ] || fail 'manifest-free sync should install communication skills'
 mv "$test_root/groups-withheld.tsv" "$source_dir/groups.tsv"
 
 printf '%s\n' 'Checking experimental source integrity...'
@@ -349,7 +352,7 @@ output=$(run_env "$batman_script" sync --target codex 2>&1)
 assert_contains "$output" 'local changes preserved'
 assert_file_contains "$codex_dir/unslop/SKILL.md" 'local edit'
 
-printf '%s\n' 'source update' >> "$source_dir/unslop/SKILL.md"
+printf '%s\n' 'source update' >> "$source_dir/communication/unslop/SKILL.md"
 if output=$(run_env "$batman_script" sync --target codex 2>&1); then
     fail 'sync should report a local/source conflict'
 fi

@@ -100,8 +100,7 @@ The repository mirrors those groups:
 skills/
 ├── dev-workflow/       # Nine workflow skills, including dependencies
 ├── ux/                 # grill-ux and ui-prototype
-├── bro/
-├── unslop/
+├── communication/      # bro and unslop
 ├── writing-for-agents/
 ├── experimental/
 └── groups.tsv
@@ -129,10 +128,13 @@ implementation, and review. It includes the skills those stages depend on.
 - `grill-ux` interviews the user to agree on a feature's UX exploration before prototyping.
 - `ui-prototype` builds three interactive alternatives with feature-scoped mock data for team discussion.
 
-### Ungrouped
+### communication
 
 - `bro` restates the last message in plain language.
 - `unslop` removes common AI writing patterns.
+
+### Ungrouped
+
 - `writing-for-agents` guides writing skills, agent instructions, and other documents agents consume.
 
 ## Experimental skills

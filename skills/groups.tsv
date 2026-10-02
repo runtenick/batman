@@ -10,3 +10,5 @@ tdd	dev-workflow	code-review
 code-review	dev-workflow	-
 grill-ux	ux	ui-prototype
 ui-prototype	ux	-
+bro	communication	-
+unslop	communication	-

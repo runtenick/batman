@@ -48,7 +48,7 @@ SOFTWARE.
 
 ## pstack skills
 
-`skills/unslop` is adapted from [pstack](https://github.com/cursor/plugins/tree/main/pstack), using the local snapshot in `~/skills-db/pstack` on September 12, 2026. Batman narrows its description to durable human-facing prose; the rule body is unchanged. `skills/bro` was supplied from the same project by the repository owner on September 15, 2026 and is unchanged.
+`skills/communication/unslop` is adapted from [pstack](https://github.com/cursor/plugins/tree/main/pstack), using the local snapshot in `~/skills-db/pstack` on September 12, 2026. Batman narrows its description to durable human-facing prose; the rule body is unchanged. `skills/communication/bro` was supplied from the same project by the repository owner on September 15, 2026 and is unchanged.
 
 MIT License
 
