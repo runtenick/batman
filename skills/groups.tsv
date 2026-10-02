@@ -1,0 +1,12 @@
+# skill	group	dependencies (comma-separated, or -)
+grill-me	dev-workflow	grilling
+grill-with-docs	dev-workflow	grilling,domain-modeling
+grilling	dev-workflow	-
+domain-modeling	dev-workflow	-
+to-spec	dev-workflow	-
+to-tickets	dev-workflow	-
+implement	dev-workflow	tdd
+tdd	dev-workflow	code-review
+code-review	dev-workflow	-
+grill-ux	ux	ui-prototype
+ui-prototype	ux	-

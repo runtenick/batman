@@ -2,9 +2,9 @@
 
 ## Matt Pocock skills
 
-`skills/grill-me`, `skills/grill-with-docs`, `skills/grilling`, `skills/domain-modeling`, `skills/to-spec`, `skills/to-tickets`, `skills/implement`, `skills/tdd`, and `skills/code-review` are adapted from [mattpocock/skills](https://github.com/mattpocock/skills). They use the local snapshot in `~/skills-db/mattpocock` from September 12, 2026.
+`skills/dev-workflow/grill-me`, `skills/dev-workflow/grill-with-docs`, `skills/dev-workflow/grilling`, `skills/dev-workflow/domain-modeling`, `skills/dev-workflow/to-spec`, `skills/dev-workflow/to-tickets`, `skills/dev-workflow/implement`, `skills/dev-workflow/tdd`, and `skills/dev-workflow/code-review` are adapted from [mattpocock/skills](https://github.com/mattpocock/skills). They use the local snapshot in `~/skills-db/mattpocock` from September 12, 2026.
 
-`skills/implement/source` preserves the upstream implement directory at commit
+`skills/dev-workflow/implement/source` preserves the upstream implement directory at commit
 `d81f3a183412e71a5b1e84ca21bc1a35eea03a60`, downloaded October 2, 2026.
 Its `SOURCE.md` is Batman metadata. This reference snapshot does not change
 the provenance of the earlier adaptation.
@@ -18,7 +18,7 @@ Its `source/` directory preserves the complete unchanged upstream skill;
 
 `skills/experimental/prototype` is an unmodified copy of `skills/engineering/prototype` from the same repository at commit [`959a8e9f1edc3adbe2f7e3054bb6fbefa6696260`](https://github.com/mattpocock/skills/commit/959a8e9f1edc3adbe2f7e3054bb6fbefa6696260). Its `agents/openai.yaml` also comes from upstream. Batman records and checks the copied directory's content hash in `skills/experimental/sources.tsv`.
 
-`skills/grill-ux` adapts the interview pattern from Batman's `grilling` skill, using the Matt Pocock snapshot described above. `skills/ui-prototype` adapts the prototype skill at the pinned commit above. These custom skills focus on team discussion of UI alternatives, with a conversational design handoff and feature-scoped mock data. They are also informed by Jeff Gothelf's [Lean UX Canvas](https://jeffgothelf.com/blog/how-to-use-the-lean-ux-canvas/). The raw experimental prototype remains unchanged.
+`skills/ux/grill-ux` adapts the interview pattern from Batman's `grilling` skill, using the Matt Pocock snapshot described above. `skills/ux/ui-prototype` adapts the prototype skill at the pinned commit above. These custom skills focus on team discussion of UI alternatives, with a conversational design handoff and feature-scoped mock data. They are also informed by Jeff Gothelf's [Lean UX Canvas](https://jeffgothelf.com/blog/how-to-use-the-lean-ux-canvas/). The raw experimental prototype remains unchanged.
 
 Batman keeps every stable skill manual-only and lets the installer derive target-specific invocation metadata. It replaces host-specific skill calls with sibling file references where the workflow requires another included skill. The implementation skill does not commit without explicit permission, and code review keeps delegation under user control.
 

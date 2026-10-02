@@ -6,6 +6,10 @@ script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 repo_dir=$(CDPATH= cd -- "$script_dir/.." && pwd)
 source_dir=${1:-"$repo_dir/skills"}
 
+# shellcheck source=scripts/lib/batman-groups.sh
+. "$script_dir/lib/batman-groups.sh"
+validate_skill_groups || exit 1
+
 errors=0
 skills_checked=0
 
@@ -83,11 +87,10 @@ has_codex_invocation_policy() {
     ' "$1"
 }
 
-for skill_dir in "$source_dir"/*; do
-    [ -d "$skill_dir" ] || continue
+for skill_dir in "$source_dir"/* "$source_dir"/*/*; do
+    is_stable_skill_dir "$skill_dir" || continue
 
     skill_name=${skill_dir##*/}
-    [ "$skill_name" = experimental ] && continue
     skills_checked=$((skills_checked + 1))
 
     skill_file="$skill_dir/SKILL.md"
@@ -191,7 +194,7 @@ if [ -d "$experimental_dir" ]; then
                     ;;
             esac
 
-            if [ -f "$source_dir/$skill_name/SKILL.md" ]; then
+            if stable_skill_source "$skill_name" >/dev/null; then
                 printf 'invalid  %s exists as both a stable and experimental skill\n' "$skill_name" >&2
                 errors=$((errors + 1))
             fi

@@ -22,7 +22,7 @@ mkdir -p "$config_dir/batman"
 printf '%s\n' codex > "$config_dir/batman/default-profile"
 
 cp -R "$repo_dir/skills" "$source_dir"
-skill_count=$(find "$source_dir" -mindepth 2 -maxdepth 2 -type f -name SKILL.md | wc -l | tr -d ' ')
+skill_count=$(find "$source_dir" -mindepth 2 -maxdepth 3 -type f -name SKILL.md ! -path "$source_dir/experimental/*" ! -path "$source_dir/*/source/*" | wc -l | tr -d ' ')
 
 fail() {
     printf 'FAIL: %s\n' "$1" >&2
@@ -64,6 +64,146 @@ run_env() {
 printf '%s\n' 'Checking canonical skill policies...'
 "$check_script" >/dev/null
 
+printf '%s\n' 'Testing group browsing and selected synchronization...'
+printf '  # ignored\tmissing\t-\n' >> "$source_dir/groups.tsv"
+output=$(run_env "$batman_script" groups)
+assert_contains "$output" 'dev-workflow       grill-me'
+assert_contains "$output" 'ux                 ui-prototype'
+assert_contains "$output" 'ungrouped          unslop'
+
+group_codex_dir="$test_root/group-codex"
+group_copilot_dir="$test_root/group-copilot"
+run_group_env() {
+    run_env env BATMAN_CODEX_SKILLS_DIR="$group_codex_dir" \
+        BATMAN_COPILOT_SKILLS_DIR="$group_copilot_dir" "$@"
+}
+output=$(run_group_env "$batman_script" sync --group dev-workflow --target all)
+assert_contains "$output" '18 installed'
+for group_destination in "$group_codex_dir" "$group_copilot_dir"; do
+    for group_skill in grill-me grill-with-docs grilling domain-modeling to-spec to-tickets implement tdd code-review; do
+        [ -f "$group_destination/$group_skill/SKILL.md" ] || fail "missing workflow skill: $group_skill"
+    done
+    for excluded_skill in grill-ux ui-prototype bro unslop writing-for-agents prototype; do
+        [ ! -e "$group_destination/$excluded_skill" ] || fail "group sync installed $excluded_skill"
+    done
+done
+assert_file_contains "$group_codex_dir/implement/agents/openai.yaml" 'allow_implicit_invocation: false'
+assert_file_contains "$group_copilot_dir/implement/SKILL.md" 'disable-model-invocation: true'
+printf '%s\n' 'group local edit' >> "$group_codex_dir/implement/SKILL.md"
+run_group_env "$batman_script" sync --group dev-workflow --target codex >/dev/null
+assert_file_contains "$group_codex_dir/implement/SKILL.md" 'group local edit'
+
+printf '%s\n' 'Testing migration from flat source paths...'
+for migrated_skill in implement tdd; do
+    printf '%s\ncodex\n' "$source_dir/$migrated_skill" > "$group_codex_dir/$migrated_skill/.batman-source"
+done
+output=$(run_group_env "$batman_script" status --group dev-workflow --target codex)
+assert_contains "$output" 'tdd                codex            manual       clean        current'
+run_group_env "$batman_script" update tdd --target codex >/dev/null
+run_group_env "$batman_script" enable tdd --target codex >/dev/null
+run_group_env "$batman_script" enable code-review --target codex >/dev/null
+mv "$group_codex_dir/code-review" "$test_root/previous-code-review"
+ln -s "$source_dir/code-review" "$group_codex_dir/code-review"
+output=$(run_group_env "$batman_script" sync --group dev-workflow --target codex)
+assert_contains "$output" 'codex migrated'
+assert_file_contains "$group_codex_dir/implement/SKILL.md" 'group local edit'
+assert_file_contains "$group_codex_dir/implement/.batman-source" "$source_dir/dev-workflow/implement"
+assert_file_contains "$group_codex_dir/tdd/agents/openai.yaml" 'allow_implicit_invocation: true'
+assert_file_contains "$group_codex_dir/code-review/agents/openai.yaml" 'allow_implicit_invocation: true'
+[ ! -L "$group_codex_dir/code-review" ] || fail 'legacy flat symlink was not migrated'
+
+output=$(run_group_env "$batman_script" status --group=ux --target codex)
+assert_contains "$output" 'grill-ux'
+assert_contains "$output" 'ui-prototype'
+case $output in *implement*|*unslop*) fail 'group status included unrelated skills' ;; esac
+
+output=$(run_group_env "$batman_script" sync --target copilot --group dev-workflow --group=ux --group ux)
+assert_contains "$output" '2 installed, 0 updated, 9 unchanged'
+[ ! -e "$group_copilot_dir/unslop" ] || fail 'combined groups installed an ungrouped skill'
+run_group_env "$install_script" --group ux --target codex >/dev/null
+[ -f "$group_codex_dir/ui-prototype/SKILL.md" ] || fail 'direct installer did not select UX'
+group_portable_dir="$test_root/group-portable"
+run_group_env env BATMAN_PORTABLE_SKILLS_DIR="$group_portable_dir" \
+    "$batman_script" sync --group ux --target portable >/dev/null
+assert_file_contains "$group_portable_dir/ui-prototype/SKILL.md" 'disable-model-invocation: true'
+[ ! -e "$group_portable_dir/implement" ] || fail 'portable group sync installed a workflow skill'
+
+for group_command in "$batman_script" "$install_script"; do
+    if [ "$group_command" = "$batman_script" ]; then
+        set -- sync
+    else
+        set --
+    fi
+    if output=$(run_group_env "$group_command" "$@" --group missing --target codex 2>&1); then
+        fail 'unknown group should fail'
+    fi
+    assert_contains "$output" 'unknown group: missing'
+    if run_group_env "$group_command" "$@" --group >/dev/null 2>&1; then
+        fail 'group without a value should fail'
+    fi
+done
+if run_group_env "$batman_script" enable implement --group dev-workflow --target codex >/dev/null 2>&1; then
+    fail 'enable should reject group selection'
+fi
+
+printf '%s\n' 'Testing group membership and dependency validation...'
+cp "$source_dir/groups.tsv" "$test_root/groups.tsv"
+printf 'grill-me\tux\t-\n' >> "$source_dir/groups.tsv"
+if output=$("$check_script" "$source_dir" 2>&1); then
+    fail 'duplicate membership should fail validation'
+fi
+assert_contains "$output" 'duplicate group membership: grill-me'
+cp "$test_root/groups.tsv" "$source_dir/groups.tsv"
+awk -F '\t' 'BEGIN { OFS = "\t" } $1 == "grilling" { $2 = "ux" } { print }' \
+    "$test_root/groups.tsv" > "$source_dir/groups.tsv"
+if output=$(run_group_env "$batman_script" sync --group dev-workflow --target codex 2>&1); then
+    fail 'cross-group dependency should fail synchronization'
+fi
+assert_contains "$output" 'dependency grilling must belong to group dev-workflow'
+cp "$test_root/groups.tsv" "$source_dir/groups.tsv"
+sed '/^tdd[[:space:]]/d' "$test_root/groups.tsv" > "$source_dir/groups.tsv"
+if output=$("$check_script" "$source_dir" 2>&1); then
+    fail 'ungrouped dependency should fail validation'
+fi
+assert_contains "$output" 'dependency tdd must belong to group dev-workflow'
+cp "$test_root/groups.tsv" "$source_dir/groups.tsv"
+printf 'missing\tux\t-\n' >> "$source_dir/groups.tsv"
+if output=$("$check_script" "$source_dir" 2>&1); then
+    fail 'unknown member should fail validation'
+fi
+assert_contains "$output" 'unknown stable skill in group manifest: missing'
+cp "$test_root/groups.tsv" "$source_dir/groups.tsv"
+printf 'malformed\tux\n' >> "$source_dir/groups.tsv"
+if output=$("$check_script" "$source_dir" 2>&1); then
+    fail 'malformed group entry should fail validation'
+fi
+assert_contains "$output" 'malformed group manifest entry'
+cp "$test_root/groups.tsv" "$source_dir/groups.tsv"
+
+printf '%s\n' 'Testing physical layout validation...'
+cp -R "$source_dir/dev-workflow/grill-me" "$source_dir/grill-me"
+if output=$("$check_script" "$source_dir" 2>&1); then
+    fail 'duplicate skill directories should fail validation'
+fi
+assert_contains "$output" 'duplicate stable skill: grill-me'
+mv "$source_dir/grill-me" "$test_root/duplicate-grill-me"
+mv "$source_dir/ux/ui-prototype" "$source_dir/ui-prototype"
+if output=$("$check_script" "$source_dir" 2>&1); then
+    fail 'membership must reflect directories'
+fi
+assert_contains "$output" 'unknown stable skill in group manifest: ui-prototype'
+mv "$source_dir/ui-prototype" "$source_dir/ux/ui-prototype"
+
+printf '%s\n' 'Testing source collections without a group manifest...'
+mv "$source_dir/groups.tsv" "$test_root/groups-withheld.tsv"
+"$check_script" "$source_dir" >/dev/null
+output=$(run_env "$batman_script" groups)
+assert_contains "$output" 'dev-workflow       grill-me'
+run_group_env env BATMAN_PORTABLE_SKILLS_DIR="$group_portable_dir" \
+    "$install_script" --target portable >/dev/null
+[ -f "$group_portable_dir/unslop/SKILL.md" ] || fail 'manifest-free sync should install ungrouped skills'
+mv "$test_root/groups-withheld.tsv" "$source_dir/groups.tsv"
+
 printf '%s\n' 'Checking experimental source integrity...'
 cp "$source_dir/experimental/prototype/SKILL.md" "$test_root/prototype-SKILL.md"
 printf '%s\n' 'source drift' >> "$source_dir/experimental/prototype/SKILL.md"
@@ -94,7 +234,7 @@ assert_contains "$output" '0 conflicts'
 printf '%s\n' 'Testing upstream reference isolation...'
 [ ! -e "$codex_dir/implement/source" ] || fail 'Codex sync should omit upstream references'
 [ ! -e "$copilot_dir/implement/source" ] || fail 'Copilot sync should omit upstream references'
-printf '%s\n' 'reference-only edit' >> "$source_dir/implement/source/SKILL.md"
+printf '%s\n' 'reference-only edit' >> "$source_dir/dev-workflow/implement/source/SKILL.md"
 output=$(run_env "$batman_script" status --target codex 2>&1)
 assert_contains "$output" 'implement          codex            manual       clean        current'
 output=$(run_env "$batman_script" sync --target codex 2>&1)

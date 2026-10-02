@@ -4,6 +4,8 @@
 . "$script_dir/lib/batman-state.sh"
 
 source_dir=${BATMAN_SOURCE_DIR:-"$repo_dir/skills"}
+# shellcheck source=scripts/lib/batman-groups.sh
+. "$script_dir/lib/batman-groups.sh"
 experimental_source_dir="$source_dir/experimental"
 codex_destination_dir=${BATMAN_CODEX_SKILLS_DIR:-${BATMAN_SKILLS_DIR:-"$HOME/.agents/skills"}}
 copilot_destination_dir=${BATMAN_COPILOT_SKILLS_DIR:-"$HOME/.copilot/skills"}
@@ -338,9 +340,9 @@ update_skill_on_target() {
     projection_kind=$(target_projection_kind "$target_name")
     destination="$destination_dir/$skill_name"
     state_file="$destination_dir/.batman/state.tsv"
-    skill_source="$source_dir/$skill_name"
+    skill_source=$(stable_skill_source "$skill_name")
 
-    if [ ! -d "$destination" ] || [ ! -f "$destination/.batman-source" ] || [ "$(sed -n '1p' "$destination/.batman-source")" != "$skill_source" ]; then
+    if [ ! -d "$destination" ] || [ ! -f "$destination/.batman-source" ] || ! stable_source_matches "$(sed -n '1p' "$destination/.batman-source")" "$skill_source"; then
         printf '%s %s is not an installed Batman skill; run sync first\n' "$target_name" "$skill_name" >&2
         return 1
     fi
@@ -422,7 +424,7 @@ validate_skill() {
 
     validate_skill_name "$skill_name" || return 1
 
-    if [ ! -f "$source_dir/$skill_name/SKILL.md" ]; then
+    if ! stable_skill_source "$skill_name" >/dev/null; then
         printf 'batman: unknown skill: %s\n' "$skill_name" >&2
         return 1
     fi
@@ -444,7 +446,7 @@ validate_experimental_skill() {
 
     validate_skill_name "$skill_name" || return 1
 
-    if [ -f "$source_dir/$skill_name/SKILL.md" ]; then
+    if stable_skill_source "$skill_name" >/dev/null; then
         printf 'batman: %s is a stable skill, not an experimental skill\n' "$skill_name" >&2
         return 1
     fi
@@ -638,11 +640,11 @@ status_target() {
     projection_kind=$(target_projection_kind "$target_name")
     state_file="$destination_dir/.batman/state.tsv"
 
-    for skill_dir in "$source_dir"/*; do
-        [ -d "$skill_dir" ] || continue
-        [ -f "$skill_dir/SKILL.md" ] || continue
+    for skill_dir in "$source_dir"/* "$source_dir"/*/*; do
+        is_stable_skill_dir "$skill_dir" || continue
 
         skill_name=${skill_dir##*/}
+        skill_selected "$skill_name" || continue
         destination="$destination_dir/$skill_name"
         source_hash=$(managed_hash "$skill_dir")
         invocation=manual
@@ -650,7 +652,7 @@ status_target() {
         update_state=current
 
         if [ -e "$destination" ] || [ -L "$destination" ]; then
-            if [ ! -d "$destination" ] || [ ! -f "$destination/.batman-source" ] || [ "$(sed -n '1p' "$destination/.batman-source")" != "$skill_dir" ]; then
+            if [ ! -d "$destination" ] || [ ! -f "$destination/.batman-source" ] || ! stable_source_matches "$(sed -n '1p' "$destination/.batman-source")" "$skill_dir"; then
                 invocation=unknown
                 local_state=conflict
                 update_state=unknown
@@ -695,7 +697,7 @@ set_skill_invocation() {
     destination="$destination_dir/$skill_name"
     state_file="$destination_dir/.batman/state.tsv"
 
-    if [ ! -d "$destination" ] || [ ! -f "$destination/.batman-source" ] || [ "$(sed -n '1p' "$destination/.batman-source")" != "$source_dir/$skill_name" ]; then
+    if [ ! -d "$destination" ] || [ ! -f "$destination/.batman-source" ] || ! stable_source_matches "$(sed -n '1p' "$destination/.batman-source")" "$(stable_skill_source "$skill_name")"; then
         printf '%s %s is not an installed Batman skill; run sync first\n' "$target_name" "$skill_name" >&2
         return 1
     fi

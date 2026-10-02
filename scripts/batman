@@ -27,10 +27,11 @@ management_work_dir=$(mktemp -d "${TMPDIR:-/tmp}/batman-command.XXXXXX")
 trap 'rm -rf "$management_work_dir"' EXIT HUP INT TERM
 
 usage() {
-    printf '%s\n' "Usage: $0 status [--target codex|copilot|portable|all]"
+    printf '%s\n' "Usage: $0 groups"
+    printf '%s\n' "       $0 status [--target codex|copilot|portable|all] [--group <name>]..."
     printf '%s\n' "       $0 enable <skill> [--target codex|copilot|portable|all]"
     printf '%s\n' "       $0 disable <skill> [--target codex|copilot|portable|all]"
-    printf '%s\n' "       $0 sync [--target codex|copilot|portable|all]"
+    printf '%s\n' "       $0 sync [--target codex|copilot|portable|all] [--group <name>]..."
     printf '%s\n' "       $0 update <skill> [--target codex|copilot|portable|all]"
     printf '%s\n' "       $0 experimental list [--target codex|copilot|all]"
     printf '%s\n' "       $0 experimental add <skill> [--target codex|copilot|all]"
@@ -108,15 +109,19 @@ agent_target_available() {
         return 0
     fi
 
-    for source_skill in "$source_dir"/* "$experimental_source_dir"/*; do
+    for source_skill in "$source_dir"/* "$source_dir"/*/*; do
         [ -d "$source_skill" ] || continue
         [ -f "$source_skill/SKILL.md" ] || continue
+        case $source_skill in
+            "$experimental_source_dir"/*) ;;
+            *) is_stable_skill_dir "$source_skill" || continue ;;
+        esac
         installed_skill="$agent_destination_dir/${source_skill##*/}"
 
-        if [ -f "$installed_skill/.batman-source" ] && [ "$(sed -n '1p' "$installed_skill/.batman-source")" = "$source_skill" ]; then
+        if [ -f "$installed_skill/.batman-source" ] && stable_source_matches "$(sed -n '1p' "$installed_skill/.batman-source")" "$source_skill"; then
             return 0
         fi
-        if [ -L "$installed_skill" ] && [ "$(readlink "$installed_skill")" = "$source_skill" ]; then
+        if [ -L "$installed_skill" ] && stable_source_matches "$(readlink "$installed_skill")" "$source_skill"; then
             return 0
         fi
     done
@@ -190,10 +195,30 @@ resolve_implicit_target() {
 }
 
 parse_target() {
+    if [ "${allow_groups:-0}" -eq 1 ]; then
+        validate_skill_groups || return 2
+    fi
     target=all
     target_specified=0
     while [ "$#" -gt 0 ]; do
         case $1 in
+            --group|--group=*)
+                if [ "${allow_groups:-0}" -ne 1 ]; then
+                    printf '%s\n' 'batman: --group is supported only by sync and status' >&2
+                    return 2
+                fi
+                if [ "$1" = --group ]; then
+                    if [ "$#" -lt 2 ]; then
+                        printf '%s\n' 'batman: --group requires a value' >&2
+                        return 2
+                    fi
+                    select_group "$2" || return 2
+                    shift 2
+                else
+                    select_group "${1#--group=}" || return 2
+                    shift
+                fi
+                ;;
             --target)
                 if [ "$#" -lt 2 ]; then
                     printf '%s\n' 'batman: --target requires a value' >&2
@@ -332,6 +357,14 @@ run_update() {
 }
 
 case ${1:-} in
+    groups)
+        shift
+        if [ "$#" -ne 0 ]; then
+            usage >&2
+            exit 2
+        fi
+        list_skill_groups
+        ;;
     config)
         shift
         config_action=${1:-}
@@ -381,14 +414,20 @@ case ${1:-} in
         ;;
     sync)
         shift
+        allow_groups=1
         parse_target "$@" || {
             usage >&2
             exit 2
         }
-        exec "$script_dir/install.sh" --target "$target"
+        set -- --target "$target"
+        for sync_group in $selected_groups; do
+            set -- "$@" --group "$sync_group"
+        done
+        exec "$script_dir/install.sh" "$@"
         ;;
     status)
         shift
+        allow_groups=1
         parse_target "$@" || {
             usage >&2
             exit 2

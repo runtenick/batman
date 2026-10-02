@@ -9,21 +9,38 @@ source_dir=${BATMAN_SOURCE_DIR:-"$repo_dir/skills"}
 # shellcheck source=scripts/lib/batman-state.sh
 . "$script_dir/lib/batman-state.sh"
 
+# shellcheck source=scripts/lib/batman-groups.sh
+. "$script_dir/lib/batman-groups.sh"
+
 codex_destination_dir=${BATMAN_CODEX_SKILLS_DIR:-${BATMAN_SKILLS_DIR:-"$HOME/.agents/skills"}}
 copilot_destination_dir=${BATMAN_COPILOT_SKILLS_DIR:-"$HOME/.copilot/skills"}
 portable_destination_dir=${BATMAN_PORTABLE_SKILLS_DIR:-${BATMAN_SKILLS_DIR:-"$HOME/.agents/skills"}}
 command_bin_dir=${BATMAN_BIN_DIR:-"$HOME/.local/bin"}
 
 usage() {
-    printf '%s\n' "Usage: $0 [--target codex|copilot|portable|all] [--install-command]"
+    printf '%s\n' "Usage: $0 [--target codex|copilot|portable|all] [--group <name>]... [--install-command]"
     printf '\n%s\n' "With no target, installs Codex and Copilot projections (same as --target all)."
     printf '%s\n' '       --install-command also installs the batman command in $BATMAN_BIN_DIR or ~/.local/bin.'
+    printf '%s\n' '       --group limits synchronization to that group; repeat to combine groups.'
 }
 
+validate_skill_groups || exit 1
 target=all
 install_command=0
 while [ "$#" -gt 0 ]; do
     case $1 in
+        --group)
+            if [ "$#" -lt 2 ]; then
+                printf '%s\n' 'install: --group requires a value' >&2
+                exit 2
+            fi
+            select_group "$2" || exit 2
+            shift 2
+            ;;
+        --group=*)
+            select_group "${1#--group=}" || exit 2
+            shift
+            ;;
         --target)
             if [ "$#" -lt 2 ]; then
                 printf '%s\n' 'install: --target requires a value' >&2
@@ -426,18 +443,18 @@ install_target() {
     mkdir -p "$destination_dir" "$projection_work_dir/$target_name"
     state_file="$destination_dir/.batman/state.tsv"
 
-    for skill_dir in "$source_dir"/*; do
-        [ -d "$skill_dir" ] || continue
-        [ -f "$skill_dir/SKILL.md" ] || continue
+    for skill_dir in "$source_dir"/* "$source_dir"/*/*; do
+        is_stable_skill_dir "$skill_dir" || continue
 
         skill_name=${skill_dir##*/}
+        skill_selected "$skill_name" || continue
         projection_dir="$projection_work_dir/$target_name/$skill_name"
         destination="$destination_dir/$skill_name"
         source_hash=$(managed_hash "$skill_dir")
 
         if [ -L "$destination" ]; then
             link_target=$(readlink "$destination")
-            if [ "$link_target" != "$skill_dir" ]; then
+            if ! stable_source_matches "$link_target" "$skill_dir"; then
                 printf '%-18s %s -> %s\n' "$target_name conflict" "$skill_name" "$link_target" >&2
                 conflicts=$((conflicts + 1))
                 continue
@@ -459,12 +476,15 @@ install_target() {
 
         if [ -e "$destination" ]; then
             marker="$destination/.batman-source"
-            if [ ! -f "$marker" ] || [ "$(sed -n '1p' "$marker")" != "$skill_dir" ]; then
+            if [ ! -f "$marker" ] || ! stable_source_matches "$(sed -n '1p' "$marker")" "$skill_dir"; then
                 printf '%-18s %s already exists at %s\n' "$target_name conflict" "$skill_name" "$destination" >&2
                 conflicts=$((conflicts + 1))
                 continue
             fi
 
+            if [ "$(sed -n '1p' "$marker")" != "$skill_dir" ]; then
+                printf '%s\n%s\n' "$skill_dir" "$projection_kind" > "$marker"
+            fi
             invocation=$(state_get "$state_file" invocation "$skill_name" 2>/dev/null || existing_invocation "$projection_kind" "$destination")
             current_hash=$(managed_hash "$destination")
             previous_source_hash=$(state_get "$state_file" source-hash "$skill_name" 2>/dev/null || true)

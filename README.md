@@ -27,6 +27,19 @@ To install skills without the command link, or to choose one target:
 ./scripts/batman sync --target portable
 ```
 
+Choose a group to install only its skills. Repeat `--group` to combine groups:
+
+```sh
+batman groups
+batman sync --group dev-workflow --target codex
+batman sync --group dev-workflow --group ux --target codex
+batman status --group ux --target codex
+```
+
+The direct installer also accepts `--group`. Without it, synchronization covers
+all stable skills, including ungrouped skills. Group selection leaves other
+installed skills untouched.
+
 `all` means Codex and Copilot, not portable. For `batman` commands, omitting `--target` uses the configured default profile, if set. Otherwise Batman selects the only detected agent or prompts when multiple agents are detected. Batman detects Codex and Copilot from their CLI commands or existing managed skill installs. In non-interactive use without a configured profile, pass `--target` when multiple agents are available. If it detects no agents, standard commands default to `all` and experimental commands default to Codex. The direct `scripts/install.sh` command keeps its default of installing both.
 
 Set a default profile to skip the prompt on future commands:
@@ -52,8 +65,9 @@ The scripts require a POSIX shell and either `sha256sum` or `shasum`.
 ## Commands
 
 ```text
-batman sync [--target codex|copilot|portable|all]
-batman status [--target codex|copilot|portable|all]
+batman groups
+batman sync [--target codex|copilot|portable|all] [--group <name>]...
+batman status [--target codex|copilot|portable|all] [--group <name>]...
 batman enable <skill> [--target codex|copilot|portable|all]
 batman disable <skill> [--target codex|copilot|portable|all]
 batman update <skill> [--target codex|copilot|portable|all]
@@ -77,17 +91,46 @@ See [docs/skill-management.md](./docs/skill-management.md) for the state and upd
 
 ## Skills
 
-- `domain-modeling` builds a project glossary and architecture decision records.
-- `code-review` reviews a change separately against repository standards and its originating spec.
+Each skill belongs to one group or none. Dependencies stay in the same group.
+`batman groups` lists membership without requiring an installation target.
+
+The repository mirrors those groups:
+
+```text
+skills/
+├── dev-workflow/       # Nine workflow skills, including dependencies
+├── ux/                 # grill-ux and ui-prototype
+├── bro/
+├── unslop/
+├── writing-for-agents/
+├── experimental/
+└── groups.tsv
+```
+
+Batman installs each skill directly into the target's skills directory.
+
+### dev-workflow
+
+The development workflow runs from grilling through specs, tickets,
+implementation, and review. It includes the skills those stages depend on.
+
 - `grill-me` interviews the user to resolve decisions in a plan or design.
-- `grill-ux` interviews the user to agree on a feature's UX exploration before prototyping.
-- `ui-prototype` builds three interactive alternatives with feature-scoped mock data for team discussion.
 - `grill-with-docs` combines that interview with domain and architecture notes.
 - `grilling` contains the shared interview workflow used by `grill-me` and `grill-with-docs`.
-- `implement` builds approved work with TDD where it fits, then reviews the result.
-- `tdd` guides test-first implementation at agreed public seams.
+- `domain-modeling` builds a project glossary and architecture decision records.
 - `to-spec` turns the current conversation into a spec, using a configured tracker or local Markdown by default.
 - `to-tickets` turns a plan or spec into dependency-aware tracer-bullet tickets, using the same destination rules.
+- `implement` builds approved work with TDD where it fits.
+- `tdd` guides test-first implementation at agreed public seams.
+- `code-review` reviews a change separately against repository standards and its originating spec.
+
+### ux
+
+- `grill-ux` interviews the user to agree on a feature's UX exploration before prototyping.
+- `ui-prototype` builds three interactive alternatives with feature-scoped mock data for team discussion.
+
+### Ungrouped
+
 - `bro` restates the last message in plain language.
 - `unslop` removes common AI writing patterns.
 - `writing-for-agents` guides writing skills, agent instructions, and other documents agents consume.

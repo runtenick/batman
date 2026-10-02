@@ -50,10 +50,11 @@ The manager must never replace a locally modified skill during an ordinary synch
 The user-facing entry point is `./scripts/batman`. The installer can also place a `batman` symlink in `~/.local/bin` (or `$BATMAN_BIN_DIR`) so the same entry point is available directly as `batman`.
 
 ```text
-./scripts/batman status [--target codex|copilot|portable|all]
+./scripts/batman groups
+./scripts/batman status [--target codex|copilot|portable|all] [--group <name>]...
 ./scripts/batman enable <skill> [--target codex|copilot|portable|all]
 ./scripts/batman disable <skill> [--target codex|copilot|portable|all]
-./scripts/batman sync [--target codex|copilot|portable|all]
+./scripts/batman sync [--target codex|copilot|portable|all] [--group <name>]...
 ./scripts/batman update <skill> [--target codex|copilot|portable|all]
 ./scripts/batman experimental list [--target codex|copilot|all]
 ./scripts/batman experimental add <skill> [--target codex|copilot|all]
@@ -66,6 +67,33 @@ The user-facing entry point is `./scripts/batman`. The installer can also place 
 `all` explicitly selects Codex and Copilot. `config set default-profile codex|copilot` chooses the target Batman uses when `--target` is omitted; the profile is stored at `$XDG_CONFIG_HOME/batman/default-profile` or `~/.config/batman/default-profile`. Use `config get default-profile` to display it and `config unset default-profile` to clear it. With a default profile set, Batman never prompts: pass `--target` to use another target for one command.
 
 Without a configured profile, Batman selects the only detected agent or prompts when it detects multiple agents. Detection checks for the CLI command or an existing Batman-managed skill installation. In non-interactive use with multiple detected agents, pass `--target`. If no agents are detected, stable commands keep their `all` default and experimental commands keep their Codex default. The direct `scripts/install.sh` command is unchanged and keeps its default of installing both.
+
+### Groups
+
+`groups` lists stable skills and their group, including skills with no group.
+It does not require a target. `skills/groups.tsv` records membership and direct
+dependencies using three tab-separated fields:
+
+```text
+# skill<TAB>group<TAB>dependencies
+grill-me	dev-workflow	grilling
+grill-with-docs	dev-workflow	grilling,domain-modeling
+grilling	dev-workflow	-
+```
+
+Use `-` when a skill has no dependencies. Grouped skills live at
+`skills/<group>/<name>`. Ungrouped skills live at `skills/<name>` and have no
+manifest entry. Record dependencies when adding or changing skills. The checker
+validates declared dependencies; it does not infer them from skill prose.
+It rejects malformed rows, duplicate names or membership, unknown skills,
+membership that differs from the directory layout, and dependencies outside the
+skill's group. Checking every direct dependency keeps transitive
+dependencies together too.
+
+The groups are `dev-workflow` and `ux`. Installed directories remain flat at
+`<skills-directory>/<name>`. Skills in the same group remain siblings in both
+layouts. Discovery excludes experimental skills and upstream `source/` snapshots.
+Experimental skills retain their separate manifest and installation commands.
 
 ### `status`
 
@@ -85,6 +113,9 @@ to-spec    codex    manual        clean         available
 grill-me   codex    manual        modified      available
 ```
 
+Use `--group <name>` to limit rows to one group. Repeat the option to show
+multiple groups. Without it, status covers every stable skill.
+
 ### `enable` and `disable`
 
 These commands change only the selected target's local invocation preference. They do not modify Batman's canonical source files.
@@ -99,6 +130,13 @@ The command also regenerates the target's invocation metadata so the active harn
 
 `sync` adds missing skills and updates installed skills that have not been locally modified. It preserves local invocation preferences, reports local modifications, and does not overwrite conflicts.
 
+Use `--group <name>` to synchronize only that group. Repeat the option to combine
+groups. Duplicate selections have no additional effect. Without group selection,
+sync covers all stable skills, including ungrouped skills. It does not remove
+installed skills outside the selection or store a default group selection.
+Unknown groups fail before any installation changes. `scripts/install.sh` accepts
+the same group options.
+
 When syncing all targets, identical outcomes are grouped onto one row per skill with the targets listed together. Different outcomes remain on separate target-specific rows. The summary counts operations per target.
 
 ### `update`
@@ -111,9 +149,15 @@ Experimental skills are raw copies of third-party sources under `skills/experime
 
 `experimental list` reports the available experiments and their installation state for Codex, Copilot, or both. `experimental add <skill>` installs or refreshes one experiment for the selected target. Codex adds `policy.allow_implicit_invocation: false`. Copilot adds `disable-model-invocation: true`. The vendored files remain unchanged. `experimental remove <skill>` removes only a copy managed from the matching experimental source. It asks before removing local changes.
 
-Experimental commands support `codex`, `copilot`, and `all`. Codex remains the default. Ordinary `sync`, `status`, `enable`, `disable`, and `update` continue to manage stable skills only. Promoting an experiment into `skills/<name>` is a separate repository change after real use supports adaptation.
+Experimental commands support `codex`, `copilot`, and `all`. Codex remains the default. Ordinary `sync`, `status`, `enable`, `disable`, and `update` continue to manage stable skills only. Promoting an experiment into the stable skill collection is a separate repository change after real use supports adaptation.
 
 ## Migration
+
+When a stable skill moves from `skills/<name>` to `skills/<group>/<name>`, Batman
+recognizes installed copies and legacy symlinks that reference the previous flat
+source path. Sync records the new path while preserving local edits, invocation
+preferences, and content baselines. Status and individual management commands also
+recognize the previous path before sync. Installed directory names do not change.
 
 The first state-aware run must import the existing installation before changing it:
 
