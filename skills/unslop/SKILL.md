@@ -1,7 +1,7 @@
 ---
 name: unslop
-description: Remove AI writing patterns from durable human-facing prose. Use for documentation, READMEs, specs, ADRs, reports, release notes, and issue or pull-request text and SKILL.md files. Do not use for ordinary chat or source code.
-disable-model-invocation: false
+description: Cut AI tells from any writing. Must always apply when talking to a human or writing for a human.
+disable-model-invocation: true
 ---
 
 # Unslop
@@ -12,7 +12,6 @@ Edit text to remove AI patterns.
 
 1. Scan for the patterns below.
 2. Rewrite. Preserve meaning, match intended tone.
-3. Self-audit: "What makes this obviously AI generated?" Fix remaining tells.
 
 ## Patterns to detect and fix
 
