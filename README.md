@@ -66,6 +66,7 @@ The scripts require a POSIX shell and either `sha256sum` or `shasum`.
 
 ```text
 batman groups
+batman scan [<dir>] [--include-unknown]
 batman sync [--target codex|copilot|portable|all] [--group <name>]...
 batman status [--target codex|copilot|portable|all] [--group <name>]...
 batman enable <skill> [--target codex|copilot|portable|all]
@@ -80,6 +81,25 @@ batman config unset default-profile
 ```
 
 `status` reports installation, local changes, invocation mode, and available source updates. `enable` allows automatic invocation for one installed target. `disable` returns it to manual-only. `update` refreshes one skill and asks before replacing local changes.
+
+`scan` inventories local skills, including skills Batman did not install. It
+shows a loading spinner in a terminal, clearing it before displaying the report.
+Redirected output does not include the spinner. The scan
+checks known global locations and searches the current Git project, or the
+current directory outside a Git project. Pass a directory to search beneath it
+instead, for example `batman scan ~/projects`.
+
+The report shows each skill's name, inferred scope (`Global` or `Project`), and
+absolute installation path. When locations match both Codex and Copilot
+conventions, it also shows a `Convention` column. Multiple installations of the
+same skill remain separate rows. Scope comes from installation conventions,
+not from detecting agent executables or observing a session.
+
+Other `SKILL.md` files, such as source copies or downloaded examples, are counted
+at the end. Use `batman scan --include-unknown` to show their paths with scope
+`Unknown`. Scanning does not change skills or configuration, and does not use
+the configured default profile. See [scan conventions and limits](./docs/skill-management.md#scan)
+for the recognized locations.
 
 `sync` installs missing skills and updates clean managed copies. It preserves locally modified copies and reports a conflict when both the source and installed copy changed. It also migrates symlinks created by older Batman versions when they point to this checkout.
 

@@ -51,6 +51,7 @@ The user-facing entry point is `./scripts/batman`. The installer can also place 
 
 ```text
 ./scripts/batman groups
+./scripts/batman scan [<dir>] [--include-unknown]
 ./scripts/batman status [--target codex|copilot|portable|all] [--group <name>]...
 ./scripts/batman enable <skill> [--target codex|copilot|portable|all]
 ./scripts/batman disable <skill> [--target codex|copilot|portable|all]
@@ -94,6 +95,63 @@ The groups are `dev-workflow`, `ux`, and `communication`. Installed directories
 remain flat at `<skills-directory>/<name>`. Skills in the same group remain siblings in both
 layouts. Discovery excludes experimental skills and upstream `source/` snapshots.
 Experimental skills retain their separate manifest and installation commands.
+
+### `scan`
+
+`scan` is a read-only installation inventory. It includes unmanaged skills and
+does not use agent executable detection, `--target`, or the default profile.
+With no directory argument, it searches beneath the nearest Git project root,
+including worktrees, or beneath the current directory when outside a project.
+An explicit directory limits the recursive search to that directory. Known
+global skill locations are checked in either case.
+
+Recognized conventions are:
+
+| Location | Scope | Convention |
+| --- | --- | --- |
+| `~/.agents/skills/<skill>/SKILL.md` | Global | Codex, Copilot |
+| `~/.copilot/skills/<skill>/SKILL.md` | Global | Copilot |
+| `/etc/codex/skills/<skill>/SKILL.md` | Global | Codex |
+| `<project-or-subdirectory>/.agents/skills/<skill>/SKILL.md` | Project | Codex, Copilot |
+| `<project-or-subdirectory>/.github/skills/<skill>/SKILL.md` | Project | Copilot |
+| `<project-or-subdirectory>/.claude/skills/<skill>/SKILL.md` | Project | Copilot |
+
+The scan also checks Batman's configured Codex and Copilot destinations, using
+`BATMAN_CODEX_SKILLS_DIR`, `BATMAN_SKILLS_DIR`, and
+`BATMAN_COPILOT_SKILLS_DIR`. These are additional global locations; standard
+locations are still checked. The conventions follow the official
+[Codex skill locations](https://learn.chatgpt.com/docs/build-skills#where-codex-loads-local-skills)
+and [Copilot CLI skill locations](https://docs.github.com/en/copilot/reference/copilot-cli-reference/cli-command-reference#skill-locations).
+
+Each installation gets a row with its frontmatter name, falling back to the
+directory name, scope, and absolute path. When recognized installations match
+more than one agent convention, a `Convention` column identifies the matches.
+Shared locations list both conventions. Duplicate skill names at different
+installation paths remain separate rows. Aliases of the same containing root
+are resolved to avoid counting the same installation twice; linked skill
+folders retain their installation paths.
+
+```text
+Skill                    Scope      Convention         Location
+deploy                   Project    Copilot            /projects/app/.github/skills/deploy
+grill-me                 Global     Codex, Copilot     /home/user/.agents/skills/grill-me
+
+4 skills found outside recognized installation locations.
+Use --include-unknown to view them.
+```
+
+The recursive search counts other `SKILL.md` files as unknown, including
+reference snapshots and source copies. `--include-unknown` adds their rows with
+scope `Unknown`; it does not change the search boundaries. Git object stores
+are excluded. Installed skill-folder links and links to project skill roots
+are inspected, but arbitrary directory symlinks are not recursively followed.
+Unreadable search paths produce an incomplete-scan warning and a nonzero exit.
+
+Scope is inferred from the location. A project row identifies an installation
+for that project or subtree, not availability everywhere beneath the requested
+search directory. The scan does not evaluate agent configuration overrides,
+disabled skills, name precedence, plugins, remote skills, or bundled skills.
+It does not establish whether an agent actually discovered or loaded a skill.
 
 ### `status`
 

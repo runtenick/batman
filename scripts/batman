@@ -28,6 +28,7 @@ trap 'rm -rf "$management_work_dir"' EXIT HUP INT TERM
 
 usage() {
     printf '%s\n' "Usage: $0 groups"
+    printf '%s\n' "       $0 scan [<dir>] [--include-unknown]"
     printf '%s\n' "       $0 status [--target codex|copilot|portable|all] [--group <name>]..."
     printf '%s\n' "       $0 enable <skill> [--target codex|copilot|portable|all]"
     printf '%s\n' "       $0 disable <skill> [--target codex|copilot|portable|all]"
@@ -357,6 +358,12 @@ run_update() {
 }
 
 case ${1:-} in
+    scan)
+        shift
+        # shellcheck source=scripts/lib/batman-scan.sh
+        . "$script_dir/lib/batman-scan.sh"
+        run_scan "$@"
+        ;;
     groups)
         shift
         if [ "$#" -ne 0 ]; then

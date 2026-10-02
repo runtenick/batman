@@ -389,4 +389,6 @@ output=$(env \
     "$bin_dir/batman" status --target codex 2>&1)
 assert_contains "$output" 'Skill              Target           Invocation'
 
+sh "$script_dir/test-batman-scan.sh"
+
 printf '%s\n' 'All Batman regression tests passed.'
