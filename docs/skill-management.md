@@ -28,6 +28,11 @@ The records mean:
 - `source-hash` identifies the canonical skill content used for the last synchronization.
 - `installed-hash` identifies the last installed content, excluding generated invocation metadata.
 
+Stable skills may keep upstream reference files in a top-level `source/` folder.
+That folder is excluded from both hashes and installed projections. Refreshing
+an upstream snapshot therefore does not create an installation update or conflict.
+Experimental skills retain their complete upstream directory in projections.
+
 The invocation preference is local state. Batman's stable skills remain manual-only by default, and a local automatic setting must not be written back into the repository.
 
 Experimental skills use each target's state file after the owner adds them. Their source path points into `skills/experimental/`, and their installed projections always start manual-only.

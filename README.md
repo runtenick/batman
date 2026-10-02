@@ -1,10 +1,10 @@
 # batman
 
+Batman doesn't need superpowers. Just skills.
+
 Batman is an experimental manager for a personal collection of AI-agent skills. Stable skills live under `skills/` and install as adjusted copies for Codex, GitHub Copilot CLI, or a portable target. Raw third-party trials live under `skills/experimental/` and require an explicit install command.
 
 It grows through personal use and does not promise a stable command or skill catalog.
-
-Inspired by [Matt Pocock's skills](https://github.com/mattpocock/skills) and [pstack](https://github.com/cursor/plugins/tree/main/pstack).
 
 ## Install
 
@@ -102,9 +102,25 @@ See [docs/skill-management.md](./docs/skill-management.md) for the state and upd
 
 See [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md) for sources, adaptations, and licenses.
 
+Borrowed stable skills can keep an unchanged upstream snapshot in `source/`,
+with provenance and dates in `source/SOURCE.md`. Batman excludes that folder
+from installed copies and active-skill hashes. `implement` is the first skill
+using this layout. Git history preserves earlier snapshots after refreshes.
+
+Use the repository-local `$maintain-skill-sources` skill to check or refresh
+snapshots, for example "Use $maintain-skill-sources to check implement" or
+"Use $maintain-skill-sources to refresh implement's source". Checking compares
+upstream with the snapshot and records the check date. Refreshing replaces
+the snapshot while preserving the personal skill. The maintenance skill lives
+under `.agents/skills/` and is manual-only; Batman does not install it globally.
+
 ## Checks
 
 ```sh
 ./scripts/check-skills.sh
 sh tests/test-batman.sh
 ```
+
+---
+
+Inspired by [Matt Pocock's skills](https://github.com/mattpocock/skills) and [pstack](https://github.com/cursor/plugins/tree/main/pstack).

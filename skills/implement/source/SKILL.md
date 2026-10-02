@@ -10,4 +10,6 @@ Use /tdd where possible, at pre-agreed seams.
 
 Run typechecking regularly, single test files regularly, and the full test suite once at the end.
 
-Do not commit the work unless the user explicitly asks for a commit.
+Once done, use /code-review to review the work.
+
+Commit your work to the current branch.

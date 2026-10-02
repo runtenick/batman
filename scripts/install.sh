@@ -138,7 +138,14 @@ managed_hash() {
 
     (
         cd "$skill_dir"
-        find . -type f ! -name '.batman-source' | LC_ALL=C sort | while IFS= read -r relative_path; do
+        case $skill_dir in
+            "$source_dir"/experimental/*)
+                find . -type f ! -name '.batman-source'
+                ;;
+            *)
+                find . -path './source' -prune -o -type f ! -name '.batman-source' -print
+                ;;
+        esac | LC_ALL=C sort | while IFS= read -r relative_path; do
             case $relative_path in
                 ./SKILL.md)
                     normalized_hash=$(awk '!/^disable-model-invocation:[[:space:]]*/' "$relative_path" | hash_stdin)
@@ -341,7 +348,15 @@ render_projection() {
     projection_kind=$3
     invocation=$4
 
-    cp -R "$skill_dir" "$projection_dir"
+    mkdir -p "$projection_dir"
+    for skill_entry in "$skill_dir"/* "$skill_dir"/.[!.]* "$skill_dir"/..?*; do
+        [ -e "$skill_entry" ] || [ -L "$skill_entry" ] || continue
+        case $skill_dir in
+            "$source_dir"/experimental/*) ;;
+            *) [ "${skill_entry##*/}" = source ] && continue ;;
+        esac
+        cp -R "$skill_entry" "$projection_dir"/
+    done
 
     if [ "$projection_kind" = codex ]; then
         render_codex_skill "$skill_dir/SKILL.md" "$projection_dir/SKILL.md.tmp"

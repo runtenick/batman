@@ -15,6 +15,11 @@ source_dir="$test_root/source"
 codex_dir="$test_root/codex"
 copilot_dir="$test_root/copilot"
 bin_dir="$test_root/bin"
+config_dir="$test_root/config"
+
+# Keep implicit experimental targets independent of the maintainer's setup.
+mkdir -p "$config_dir/batman"
+printf '%s\n' codex > "$config_dir/batman/default-profile"
 
 cp -R "$repo_dir/skills" "$source_dir"
 skill_count=$(find "$source_dir" -mindepth 2 -maxdepth 2 -type f -name SKILL.md | wc -l | tr -d ' ')
@@ -49,6 +54,7 @@ assert_file_contains() {
 
 run_env() {
     env \
+        XDG_CONFIG_HOME="$config_dir" \
         BATMAN_SOURCE_DIR="$source_dir" \
         BATMAN_CODEX_SKILLS_DIR="$codex_dir" \
         BATMAN_COPILOT_SKILLS_DIR="$copilot_dir" \
@@ -84,6 +90,24 @@ run_env "$batman_script" sync --target copilot >/dev/null
 output=$(run_env "$batman_script" sync --target codex 2>&1)
 assert_contains "$output" "$skill_count unchanged"
 assert_contains "$output" '0 conflicts'
+
+printf '%s\n' 'Testing upstream reference isolation...'
+[ ! -e "$codex_dir/implement/source" ] || fail 'Codex sync should omit upstream references'
+[ ! -e "$copilot_dir/implement/source" ] || fail 'Copilot sync should omit upstream references'
+printf '%s\n' 'reference-only edit' >> "$source_dir/implement/source/SKILL.md"
+output=$(run_env "$batman_script" status --target codex 2>&1)
+assert_contains "$output" 'implement          codex            manual       clean        current'
+output=$(run_env "$batman_script" sync --target codex 2>&1)
+assert_contains "$output" "$skill_count unchanged"
+run_env "$batman_script" update implement --target codex >/dev/null
+run_env "$batman_script" update implement --target copilot >/dev/null
+[ ! -e "$codex_dir/implement/source" ] || fail 'Codex update should omit upstream references'
+[ ! -e "$copilot_dir/implement/source" ] || fail 'Copilot update should omit upstream references'
+portable_dir="$test_root/portable"
+run_env env BATMAN_PORTABLE_SKILLS_DIR="$portable_dir" "$batman_script" sync --target portable >/dev/null
+[ ! -e "$portable_dir/implement/source" ] || fail 'portable sync should omit upstream references'
+run_env env BATMAN_PORTABLE_SKILLS_DIR="$portable_dir" "$batman_script" update implement --target portable >/dev/null
+[ ! -e "$portable_dir/implement/source" ] || fail 'portable update should omit upstream references'
 
 printf '%s\n' 'Testing status and invocation management...'
 output=$(run_env "$batman_script" status --target codex 2>&1)
