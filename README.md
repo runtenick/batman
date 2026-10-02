@@ -2,9 +2,11 @@
 
 Batman doesn't need superpowers. Just skills.
 
-Batman is an experimental manager for a personal collection of AI-agent skills. Stable skills live under `skills/` and install as adjusted copies for Codex, GitHub Copilot CLI, or a portable target. Raw third-party trials live under `skills/experimental/` and require an explicit install command.
+---
 
-It grows through personal use and does not promise a stable command or skill catalog.
+This repo is __two things.__
+- my personal collection of skills for software development
+- a work in progress skill manager for coding agents
 
 ## Install
 
