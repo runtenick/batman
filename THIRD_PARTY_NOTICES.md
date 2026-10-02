@@ -9,6 +9,13 @@
 Its `SOURCE.md` is Batman metadata. This reference snapshot does not change
 the provenance of the earlier adaptation.
 
+`skills/writing-for-agents` is adapted from `skills/productivity/writing-for-agents`
+at commit [`d81f3a183412e71a5b1e84ca21bc1a35eea03a60`](https://github.com/mattpocock/skills/commit/d81f3a183412e71a5b1e84ca21bc1a35eea03a60),
+added October 2, 2026. Batman adds manual-only invocation metadata, adjusts the
+description, and documents its invocation default in `SKILL-MECHANICS.md`.
+Its `source/` directory preserves the complete unchanged upstream skill;
+`source/SOURCE.md` records Batman provenance.
+
 `skills/experimental/prototype` is an unmodified copy of `skills/engineering/prototype` from the same repository at commit [`959a8e9f1edc3adbe2f7e3054bb6fbefa6696260`](https://github.com/mattpocock/skills/commit/959a8e9f1edc3adbe2f7e3054bb6fbefa6696260). Its `agents/openai.yaml` also comes from upstream. Batman records and checks the copied directory's content hash in `skills/experimental/sources.tsv`.
 
 `skills/grill-ux` adapts the interview pattern from Batman's `grilling` skill, using the Matt Pocock snapshot described above. `skills/ui-prototype` adapts the prototype skill at the pinned commit above. These custom skills focus on team discussion of UI alternatives, with a conversational design handoff and feature-scoped mock data. They are also informed by Jeff Gothelf's [Lean UX Canvas](https://jeffgothelf.com/blog/how-to-use-the-lean-ux-canvas/). The raw experimental prototype remains unchanged.

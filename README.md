@@ -71,12 +71,6 @@ batman config unset default-profile
 
 Every stable skill sets `disable-model-invocation: true`, so skills start as manual-only. Copilot and portable copies use that field for their local invocation mode. Codex copies remove the unsupported field and store the local mode as `policy.allow_implicit_invocation` in `agents/openai.yaml`.
 
-To apply the Git standards and approval rules automatically, enable the Git workflow skill after syncing:
-
-```sh
-batman enable git-workflow --target codex
-```
-
 See [docs/skill-management.md](./docs/skill-management.md) for the state and update model.
 
 ## Skills
@@ -88,13 +82,13 @@ See [docs/skill-management.md](./docs/skill-management.md) for the state and upd
 - `ui-prototype` builds three interactive alternatives with feature-scoped mock data for team discussion.
 - `grill-with-docs` combines that interview with domain and architecture notes.
 - `grilling` contains the shared interview workflow used by `grill-me` and `grill-with-docs`.
-- `git-workflow` applies Conventional Commit standards and approval rules to Git changes.
 - `implement` builds approved work with TDD where it fits, then reviews the result.
 - `tdd` guides test-first implementation at agreed public seams.
 - `to-spec` turns the current conversation into a spec, using a configured tracker or local Markdown by default.
 - `to-tickets` turns a plan or spec into dependency-aware tracer-bullet tickets, using the same destination rules.
 - `bro` restates the last message in plain language.
 - `unslop` removes common AI writing patterns.
+- `writing-for-agents` guides writing skills, agent instructions, and other documents agents consume.
 
 ## Experimental skills
 
