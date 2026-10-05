@@ -32,7 +32,7 @@ and `prototype` directories, respectively, at commit
 `4588b32ecab9ecc9fc8cc6b6c5e7d675b6004b0d`, downloaded October 5, 2026.
 Their `SOURCE.md` files explain the relationship to the custom skills.
 
-Batman stable skills inherit source invocation defaults, and skills without a source are manual by default. The installer derives target-specific invocation metadata. Dependencies use Matt's explicit "call the Skill tool" convention. The implementation skill does not commit without explicit permission, and code review keeps delegation under user control.
+Batman stable skills inherit source invocation defaults, and skills without a source are manual by default. The installer derives target-specific invocation metadata. Dependencies use Matt's explicit "call the Skill tool" convention. The implementation skill follows Matt's review-and-commit close-out. Code review includes uncommitted work when requested and keeps delegation under user control.
 
 Batman adopts v1.3's `GLOSSARY.md` and `GLOSSARY-MAP.md` filenames in the active
 domain-modeling and TDD skills, including the `GLOSSARY-FORMAT.md` template.

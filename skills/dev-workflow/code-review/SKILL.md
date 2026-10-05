@@ -3,7 +3,7 @@ name: code-review
 description: Review changes since a fixed point along separate Standards and Spec axes. Use for a branch, PR, work-in-progress changes, or a request to review since a commit, branch, tag, or merge-base.
 ---
 
-Review the diff between `HEAD` and a fixed point along two axes:
+Review changes since a fixed point along two axes:
 
 - **Standards**: does the code conform to this repo's documented coding standards?
 - **Spec**: does the code faithfully implement the originating issue or spec?
@@ -16,11 +16,15 @@ Use the project's configured issue tracker. If none is available, use a local sp
 
 ### 1. Pin the fixed point
 
-Whatever the user said is the fixed point (a commit SHA, branch name, tag, `main`, `HEAD~5`, etc.). If they didn't specify one, ask for it.
+Whatever the user said is the fixed point (a commit SHA, branch name, tag, `main`, `HEAD~5`, etc.). For work-in-progress or implementation close-out, default to `HEAD` and include uncommitted work. For a committed branch or PR review without a fixed point, ask for it.
 
-Before running any Git command, tell the user what you are about to inspect. Capture the diff command once: `git diff <fixed-point>...HEAD` (three-dot, so the comparison is against the merge-base). Also note the list of commits via `git log <fixed-point>..HEAD --oneline`.
+For committed changes, capture the diff command once: `git diff <fixed-point>...HEAD` (three-dot, so the comparison is against the merge-base). Also note the list of commits via `git log <fixed-point>..HEAD --oneline`.
 
-Confirm the fixed point resolves (`git rev-parse <fixed-point>`) and the diff is non-empty. A bad ref or empty diff should fail here, not during the two reviews.
+For uncommitted work, resolve the base with `git merge-base <fixed-point> HEAD` and use `git diff <base>` to include committed, staged, and unstaged tracked changes together. List new files with `git ls-files --others --exclude-standard` and read their contents too. Limit the review to the implementation's files and hunks when unrelated edits are present, and record that scope with the diff commands.
+
+Inspect `git diff --cached` and `git diff` too when the index and working tree differ, so staged changes remain visible even if unstaged edits reverse them.
+
+Confirm the fixed point resolves (`git rev-parse <fixed-point>`) and that the selected scope contains a diff or new files. Report a bad ref or empty scope before running the two reviews.
 
 ### 2. Identify the spec source
 
@@ -59,13 +63,13 @@ Each smell reads *what it is* → *how to fix*; match it against the diff:
 
 The Standards review receives:
 
-- The full diff command and commit list.
+- The full diff commands, commit list, and any new-file contents and scope limits.
 - The standards-source files from step 3, plus the complete smell baseline from step 3.
 - This brief: "Report, per file/hunk where relevant, (a) every place the diff violates a documented standard: cite the standard (file + the rule); and (b) any baseline smell you spot: name it and quote the hunk. Distinguish hard violations from judgement calls: documented-standard breaches can be hard, but baseline smells are always judgement calls, and a documented repo standard overrides the baseline. Skip anything tooling enforces. Under 400 words."
 
 The Spec review receives:
 
-- The diff command and commit list.
+- The diff commands, commit list, and any new-file contents and scope limits.
 - The path or fetched contents of the spec.
 - This brief: "Report: (a) requirements the spec asked for that are missing or partial; (b) behaviour in the diff that wasn't asked for (scope creep); (c) requirements that look implemented but where the implementation looks wrong. Quote the spec line for each finding. Under 400 words."
 

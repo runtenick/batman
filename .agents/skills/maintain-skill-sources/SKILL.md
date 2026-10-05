@@ -51,8 +51,7 @@ Prepare the complete replacement snapshot before changing the saved files.
 Check for existing edits in `source/` and preserve work that is not part of this
 request. Ensure Git history contains the previous snapshot before replacing it;
 if it has never been committed or differs from its committed version, retain
-that version under `.context/` and report the backup location. Do not commit
-as part of this workflow unless the user separately authorizes it.
+that version under `.context/` and report the backup location.
 
 Copy upstream files byte-for-byte. Replace only the files in the selected
 `source/` folder, removing files that upstream removed and preserving `SOURCE.md`.

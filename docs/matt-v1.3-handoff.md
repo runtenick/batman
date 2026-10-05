@@ -2,7 +2,8 @@
 
 This handoff records the October 5, 2026 review of
 [Matt's v1.3 changelog](https://www.aihero.dev/skills/skills-changelog-v13-implement-spec-pr-retro-and-glossary-md).
-It authorizes no further changes. Review each item separately with the owner.
+Adopted changes are recorded below. Pending items require separate selection
+by the owner.
 
 ## Adopted glossary convention
 
@@ -31,18 +32,24 @@ Fresh installations use these defaults; existing local invocation settings are
 preserved. Experimental projections also inherit source defaults after explicit
 addition. Model choice and delegation remain under the owner's control.
 
-## Implementation close-out, pending review
+## Implementation close-out, adopted after review
 
-Upstream `implement` ends with code review and a commit. Batman's version ends
-with verification and prohibits commits unless the owner explicitly requests
-one. Preserve that commit boundary.
+The owner chose to remove Batman's custom Git restrictions and use Matt's
+skills as the starting point. `implement` now ends with code review and a
+commit to the current branch, matching the saved upstream workflow.
 
-Decide separately whether implementation should automatically include review.
-Batman's current `code-review` uses `git diff <fixed-point>...HEAD`, which omits
-uncommitted changes. Before adding a review step, define how it should include
-staged, unstaged, and new files, how the comparison point is selected, and how
-existing unrelated edits are excluded. Keep the Standards and Spec review axes
-separate, and preserve the explicit authorization requirement for delegation.
+Implementation close-out reviews against `HEAD`, including staged, unstaged,
+and new files. `code-review` retains the three-dot comparison for committed
+branch reviews and uses the merge-base to include working-tree changes for
+work-in-progress reviews. It scopes out unrelated files and hunks. The
+Standards and Spec axes remain separate, and delegation remains under the
+owner's control.
+
+The source-maintenance skill's separate commit-authorization requirement and
+the custom Git permission wording in `ui-prototype` were removed too.
+`ui-prototype` captures its alternatives in a commit on the throwaway branch,
+following Matt's prototype capture convention. Upstream snapshots remain
+unchanged.
 
 ## New skills, candidates for evaluation
 
@@ -54,7 +61,7 @@ separate, and preserve the explicit authorization requirement for delegation.
   including the upstream `CREDITS.md`. Automatic invocation requires opt-in.
 - `implement-spec`: defer until the owner wants whole-spec orchestration with
   parallel agents, worktrees, and an integration branch. Its tracker setup,
-  commits, PR lifecycle, and cleanup need separate review against Batman's rules.
+  orchestration, PR lifecycle, and cleanup need separate evaluation.
 
 If selected for evaluation, put each unchanged upstream directory under
 `skills/experimental/`, pin its commit and hash in `sources.tsv`, and keep

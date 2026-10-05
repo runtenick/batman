@@ -182,7 +182,7 @@ implementation, and review. It includes the skills those stages depend on.
 - `domain-modeling` builds a project glossary and architecture decision records.
 - `to-spec` turns the current conversation into a spec, using a configured tracker or local Markdown by default.
 - `to-tickets` turns a plan or spec into dependency-aware tracer-bullet tickets, using the same destination rules.
-- `implement` builds approved work with TDD where it fits.
+- `implement` builds approved work with TDD where it fits, reviews it, and commits to the current branch.
 - `tdd` guides test-first implementation at agreed public seams.
 - `code-review` reviews a change separately against repository standards and its originating spec.
 

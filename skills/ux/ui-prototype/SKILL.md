@@ -15,7 +15,7 @@ Read the relevant code and project UI instructions or design skills. Follow the 
 - Existing page or flow: mount the alternatives in their natural location, preserving the surrounding app.
 - New UI with no suitable host: add a prototype page using the project's routing conventions and only the context needed for the task.
 
-Use the existing development setup. Work on a throwaway branch under the repository's Git rules and required permissions. Preserve unrelated work. Do not delegate unless requested.
+Use the existing development setup. Work on a throwaway branch. Preserve unrelated work. Do not delegate unless requested.
 
 ## 2. Choose three distinct approaches
 
@@ -75,4 +75,4 @@ Still assumed: <what team review or later user evidence must resolve>
 Verification: <what was checked and any limits>
 ```
 
-Leave all alternatives available for review. Follow repository rules for commits and pushes. Do not choose a winner, merge the prototypes, or implement the MVP. Revisions can happen on request; MVP definition belongs to a later standard grilling session using the branch and team feedback.
+Commit the alternatives to the throwaway branch and leave them available for review. MVP definition belongs to a later standard grilling session using the branch and team feedback.

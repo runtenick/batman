@@ -10,4 +10,6 @@ Call the Skill tool with "tdd" where possible, at pre-agreed seams.
 
 Run typechecking regularly, single test files regularly, and the full test suite once at the end.
 
-Do not commit the work unless the user explicitly asks for a commit.
+Once done, call the Skill tool with "code-review" to review the work, including staged, unstaged, and new files, against `HEAD`.
+
+Commit your work to the current branch.
