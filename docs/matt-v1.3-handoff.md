@@ -2,8 +2,8 @@
 
 This handoff records the October 5, 2026 review of
 [Matt's v1.3 changelog](https://www.aihero.dev/skills/skills-changelog-v13-implement-spec-pr-retro-and-glossary-md).
-Adopted changes are recorded below. Pending items require separate selection
-by the owner.
+This is a historical record. The October 5 upstream reset supersedes the
+adaptations below. Pending items require separate selection by the owner.
 
 ## Adopted glossary convention
 
@@ -26,11 +26,10 @@ and `implement` explicitly calls it with "tdd" instead of a bare `/tdd` mention.
 This wording requests skill invocation through the agent's available mechanism;
 it does not require Claude Code or a literal tool named `Skill`.
 
-Stable skills now inherit their source's default invocability, including the
-Matt-derived UX adaptations. Skills without a source are manual by default.
+Stable skills now inherit their source's default invocability, including their upstream invocation metadata. Skills without a source are manual by default.
 Fresh installations use these defaults; existing local invocation settings are
 preserved. Experimental projections also inherit source defaults after explicit
-addition. Model choice and delegation remain under the owner's control.
+addition. Model choice remains under the owner's control.
 
 ## Implementation close-out, adopted after review
 
@@ -42,14 +41,10 @@ Implementation close-out reviews against `HEAD`, including staged, unstaged,
 and new files. `code-review` retains the three-dot comparison for committed
 branch reviews and uses the merge-base to include working-tree changes for
 work-in-progress reviews. It scopes out unrelated files and hunks. The
-Standards and Spec axes remain separate, and delegation remains under the
-owner's control.
+Standards and Spec axes remain separate.
 
-The source-maintenance skill's separate commit-authorization requirement and
-the custom Git permission wording in `ui-prototype` were removed too.
-`ui-prototype` captures its alternatives in a commit on the throwaway branch,
-following Matt's prototype capture convention. Upstream snapshots remain
-unchanged.
+The source-maintenance skill's separate commit-authorization requirement was
+removed too. Upstream snapshots remain unchanged.
 
 ## New skills, candidates for evaluation
 
@@ -59,9 +54,8 @@ unchanged.
 - `pr`: evaluate its visual summaries, concrete evidence, and discussion of
   reversibility and impact. Preserve project PR templates and attribution,
   including the upstream `CREDITS.md`. Automatic invocation requires opt-in.
-- `implement-spec`: defer until the owner wants whole-spec orchestration with
-  parallel agents, worktrees, and an integration branch. Its tracker setup,
-  orchestration, PR lifecycle, and cleanup need separate evaluation.
+- `implement-spec`: a candidate for whole-spec implementation. Its tracker
+  setup, orchestration, PR lifecycle, and cleanup need separate evaluation.
 
 If selected for evaluation, put each unchanged upstream directory under
 `skills/experimental/`, pin its commit and hash in `sources.tsv`, and keep

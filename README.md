@@ -41,8 +41,8 @@ Choose a group to install only its skills. Repeat `--group` to combine groups:
 ```sh
 batman groups
 batman sync --group dev-workflow --target codex
-batman sync --group dev-workflow --group ux --target codex
-batman status --group ux --target codex
+batman sync --group dev-workflow --group communication --target codex
+batman status --group communication --target codex
 ```
 
 Without `--group`, synchronization covers all stable skills, including
@@ -100,7 +100,7 @@ options. Replace earlier usage as follows:
 | --- | --- |
 | `./scripts/install.sh --install-command` | `./scripts/install.sh`, then `batman sync --target all` if you also want skills for both agents |
 | `./scripts/install.sh` to install all skills | `batman sync --target all` |
-| `./scripts/install.sh --target codex --group ux` | `batman sync --target codex --group ux` |
+| `./scripts/install.sh --target codex --group communication` | `batman sync --target codex --group communication` |
 
 Setup refuses to replace an existing unrelated command. Running it again for
 the same checkout leaves the command link in place.
@@ -148,7 +148,7 @@ for the recognized locations.
 
 `experimental list` shows raw skills available for testing. `experimental add` installs one for Codex, Copilot, or both with its source invocation default. When `--target` is omitted, it follows the detected-agent behavior above. The command does not change the vendored files. `experimental remove` removes the managed copies and asks first if a copy has local changes. Ordinary `sync` ignores experimental skills.
 
-Stable skills inherit their source's default invocability. Skills without a source are manual by default. Matt-derived skills keep his manual or model-invoked defaults, including the UX adaptations. Fresh installations use these defaults; synchronization preserves existing local invocation settings. Copilot and portable copies use `disable-model-invocation` for their local invocation mode. Codex copies remove the unsupported field and store the local mode as `policy.allow_implicit_invocation` in `agents/openai.yaml`.
+Stable skills inherit their source's default invocability. Skills without a source are manual by default. Matt-derived skills and supporting files match upstream exactly and keep his manual or model-invoked defaults. Fresh installations use these defaults; synchronization preserves existing local invocation settings. Copilot and portable copies use `disable-model-invocation` for their local invocation mode. Codex copies remove the unsupported field and store the local mode as `policy.allow_implicit_invocation` in `agents/openai.yaml`.
 
 See [docs/skill-management.md](./docs/skill-management.md) for the state and update model.
 
@@ -162,7 +162,6 @@ The repository mirrors those groups:
 ```text
 skills/
 ├── dev-workflow/       # Nine workflow skills, including dependencies
-├── ux/                 # grill-ux and ui-prototype
 ├── communication/      # bro and unslop
 ├── writing-for-agents/
 ├── experimental/
@@ -180,16 +179,14 @@ implementation, and review. It includes the skills those stages depend on.
 - `grill-with-docs` combines that interview with domain and architecture notes.
 - `grilling` contains the shared interview workflow used by `grill-me` and `grill-with-docs`.
 - `domain-modeling` builds a project glossary and architecture decision records.
-- `to-spec` turns the current conversation into a spec, using a configured tracker or local Markdown by default.
-- `to-tickets` turns a plan or spec into dependency-aware tracer-bullet tickets, using the same destination rules.
+- `to-spec` turns the current conversation into a spec using the configured tracker.
+- `to-tickets` turns a plan or spec into dependency-aware tracer-bullet tickets using the configured tracker.
 - `implement` builds approved work with TDD where it fits, reviews it, and commits to the current branch.
 - `tdd` guides test-first implementation at agreed public seams.
-- `code-review` reviews a change separately against repository standards and its originating spec.
+- `code-review` runs parallel reviews against repository standards and the originating spec.
 
-### ux
-
-- `grill-ux` interviews the user to agree on a feature's UX exploration before prototyping.
-- `ui-prototype` builds three interactive alternatives with feature-scoped mock data for team discussion.
+The unchanged upstream skills refer to `setup-matt-pocock-skills` and
+`codebase-design`. These dependencies are not included in Batman.
 
 ### communication
 
@@ -208,8 +205,7 @@ See [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md) for sources, adaptations,
 
 Every stable skill borrowed from Matt Pocock or pstack keeps an unchanged
 upstream snapshot in `source/`, with provenance and dates in `source/SOURCE.md`.
-For `grill-ux` and `ui-prototype`, the snapshots preserve the upstream `grilling`
-and `prototype` skills behind those adaptations. Batman excludes source folders
+Batman excludes source folders
 from installed copies and active-skill hashes. Git history preserves earlier
 snapshots after refreshes.
 

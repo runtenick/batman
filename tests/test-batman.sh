@@ -65,11 +65,18 @@ run_env() {
 printf '%s\n' 'Checking canonical skill policies...'
 "$check_script" >/dev/null
 
+printf '%s\n' 'Testing unchanged upstream invocation metadata...'
+cp "$source_dir/dev-workflow/implement/agents/openai.yaml" "$test_root/implement-openai.yaml"
+printf '%s\n' '  custom_policy: true' >> "$source_dir/dev-workflow/implement/agents/openai.yaml"
+if "$check_script" "$source_dir" >/dev/null 2>&1; then
+    fail 'modified canonical invocation metadata must fail validation'
+fi
+cp "$test_root/implement-openai.yaml" "$source_dir/dev-workflow/implement/agents/openai.yaml"
+
 printf '%s\n' 'Testing group browsing and selected synchronization...'
 printf '  # ignored\tmissing\t-\n' >> "$source_dir/groups.tsv"
 output=$(run_env "$batman_script" groups)
 assert_contains "$output" 'dev-workflow       grill-me'
-assert_contains "$output" 'ux                 ui-prototype'
 assert_contains "$output" 'communication      bro'
 assert_contains "$output" 'communication      unslop'
 assert_contains "$output" 'ungrouped          writing-for-agents'
@@ -86,7 +93,7 @@ for group_destination in "$group_codex_dir" "$group_copilot_dir"; do
     for group_skill in grill-me grill-with-docs grilling domain-modeling to-spec to-tickets implement tdd code-review; do
         [ -f "$group_destination/$group_skill/SKILL.md" ] || fail "missing workflow skill: $group_skill"
     done
-    for excluded_skill in grill-ux ui-prototype bro unslop writing-for-agents prototype; do
+    for excluded_skill in bro unslop writing-for-agents prototype; do
         [ ! -e "$group_destination/$excluded_skill" ] || fail "group sync installed $excluded_skill"
     done
 done
@@ -164,20 +171,20 @@ assert_file_contains "$group_codex_dir/tdd/agents/openai.yaml" 'allow_implicit_i
 assert_file_contains "$group_codex_dir/code-review/agents/openai.yaml" 'allow_implicit_invocation: true'
 [ ! -L "$group_codex_dir/code-review" ] || fail 'legacy flat symlink was not migrated'
 
-output=$(run_group_env "$batman_script" status --group=ux --target codex)
-assert_contains "$output" 'grill-ux'
-assert_contains "$output" 'ui-prototype'
-case $output in *implement*|*unslop*) fail 'group status included unrelated skills' ;; esac
+output=$(run_group_env "$batman_script" status --group=communication --target codex)
+assert_contains "$output" 'unslop'
+assert_contains "$output" 'bro'
+case $output in *implement*|*writing-for-agents*) fail 'group status included unrelated skills' ;; esac
 
-output=$(run_group_env "$batman_script" sync --target copilot --group dev-workflow --group=ux --group ux)
+output=$(run_group_env "$batman_script" sync --target copilot --group dev-workflow --group=communication --group communication)
 assert_contains "$output" '2 installed, 0 updated, 9 unchanged'
-[ ! -e "$group_copilot_dir/unslop" ] || fail 'combined groups installed a communication skill'
-run_group_env "$sync_script" --group ux --target codex >/dev/null
-[ -f "$group_codex_dir/ui-prototype/SKILL.md" ] || fail 'direct installer did not select UX'
+[ ! -e "$group_copilot_dir/writing-for-agents" ] || fail 'combined groups installed an ungrouped skill'
+run_group_env "$sync_script" --group communication --target codex >/dev/null
+[ -f "$group_codex_dir/bro/SKILL.md" ] || fail 'direct installer did not select communication'
 group_portable_dir="$test_root/group-portable"
 run_group_env env BATMAN_PORTABLE_SKILLS_DIR="$group_portable_dir" \
-    "$batman_script" sync --group ux --target portable >/dev/null
-assert_file_contains "$group_portable_dir/ui-prototype/SKILL.md" 'disable-model-invocation: false'
+    "$batman_script" sync --group communication --target portable >/dev/null
+assert_file_contains "$group_portable_dir/bro/SKILL.md" 'disable-model-invocation: true'
 [ ! -e "$group_portable_dir/implement" ] || fail 'portable group sync installed a workflow skill'
 
 for group_command in "$batman_script" "$sync_script"; do
@@ -200,13 +207,13 @@ fi
 
 printf '%s\n' 'Testing group membership and dependency validation...'
 cp "$source_dir/groups.tsv" "$test_root/groups.tsv"
-printf 'grill-me\tux\t-\n' >> "$source_dir/groups.tsv"
+printf 'grill-me\tcommunication\t-\n' >> "$source_dir/groups.tsv"
 if output=$("$check_script" "$source_dir" 2>&1); then
     fail 'duplicate membership should fail validation'
 fi
 assert_contains "$output" 'duplicate group membership: grill-me'
 cp "$test_root/groups.tsv" "$source_dir/groups.tsv"
-awk -F '\t' 'BEGIN { OFS = "\t" } $1 == "grilling" { $2 = "ux" } { print }' \
+awk -F '\t' 'BEGIN { OFS = "\t" } $1 == "grilling" { $2 = "communication" } { print }' \
     "$test_root/groups.tsv" > "$source_dir/groups.tsv"
 if output=$(run_group_env "$batman_script" sync --group dev-workflow --target codex 2>&1); then
     fail 'cross-group dependency should fail synchronization'
@@ -219,13 +226,13 @@ if output=$("$check_script" "$source_dir" 2>&1); then
 fi
 assert_contains "$output" 'dependency tdd must belong to group dev-workflow'
 cp "$test_root/groups.tsv" "$source_dir/groups.tsv"
-printf 'missing\tux\t-\n' >> "$source_dir/groups.tsv"
+printf 'missing\tcommunication\t-\n' >> "$source_dir/groups.tsv"
 if output=$("$check_script" "$source_dir" 2>&1); then
     fail 'unknown member should fail validation'
 fi
 assert_contains "$output" 'unknown stable skill in group manifest: missing'
 cp "$test_root/groups.tsv" "$source_dir/groups.tsv"
-printf 'malformed\tux\n' >> "$source_dir/groups.tsv"
+printf 'malformed\tcommunication\n' >> "$source_dir/groups.tsv"
 if output=$("$check_script" "$source_dir" 2>&1); then
     fail 'malformed group entry should fail validation'
 fi
@@ -239,12 +246,12 @@ if output=$("$check_script" "$source_dir" 2>&1); then
 fi
 assert_contains "$output" 'duplicate stable skill: grill-me'
 mv "$source_dir/grill-me" "$test_root/duplicate-grill-me"
-mv "$source_dir/ux/ui-prototype" "$source_dir/ui-prototype"
+mv "$source_dir/communication/bro" "$source_dir/bro"
 if output=$("$check_script" "$source_dir" 2>&1); then
     fail 'membership must reflect directories'
 fi
-assert_contains "$output" 'unknown stable skill in group manifest: ui-prototype'
-mv "$source_dir/ui-prototype" "$source_dir/ux/ui-prototype"
+assert_contains "$output" 'unknown stable skill in group manifest: bro'
+mv "$source_dir/bro" "$source_dir/communication/bro"
 
 printf '%s\n' 'Testing source collections without a group manifest...'
 mv "$source_dir/groups.tsv" "$test_root/groups-withheld.tsv"

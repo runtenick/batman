@@ -5,5 +5,3 @@ disable-model-invocation: true
 ---
 
 Call the Skill tool twice, for "grilling" and "domain-modeling".
-
-Apply them together throughout the session.

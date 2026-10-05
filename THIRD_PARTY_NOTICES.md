@@ -2,42 +2,25 @@
 
 ## Matt Pocock skills
 
-`skills/dev-workflow/grill-me`, `skills/dev-workflow/grill-with-docs`, `skills/dev-workflow/grilling`, `skills/dev-workflow/domain-modeling`, `skills/dev-workflow/to-spec`, `skills/dev-workflow/to-tickets`, `skills/dev-workflow/implement`, `skills/dev-workflow/tdd`, and `skills/dev-workflow/code-review` are adapted from [mattpocock/skills](https://github.com/mattpocock/skills). They use the local snapshot in `~/skills-db/mattpocock` from September 12, 2026.
+The nine skills in `skills/dev-workflow/` and `skills/writing-for-agents` come
+from [mattpocock/skills](https://github.com/mattpocock/skills). Batman checked
+all source directories against upstream `main` at commit
+[`4588b32ecab9ecc9fc8cc6b6c5e7d675b6004b0d`](https://github.com/mattpocock/skills/commit/4588b32ecab9ecc9fc8cc6b6c5e7d675b6004b0d)
+on October 5, 2026. Their `source/SOURCE.md` files record each snapshot's
+path, commit, and dates. Snapshots pinned to earlier commits have identical
+content at the checked revision.
 
-`skills/dev-workflow/implement/source` preserves the upstream implement directory at commit
-`d81f3a183412e71a5b1e84ca21bc1a35eea03a60`, downloaded October 2, 2026.
-Its `SOURCE.md` is Batman metadata. This reference snapshot does not change
-the provenance of the earlier adaptation.
+The owner requested an upstream reset on October 5, 2026. Active skill files,
+including supporting files and agent metadata, are restored byte-for-byte
+from upstream. Batman's installer continues to derive target invocation
+metadata and preserve installed local overrides.
 
-The other eight `skills/dev-workflow` skills preserve their complete upstream
-directories at commit
-[`4588b32ecab9ecc9fc8cc6b6c5e7d675b6004b0d`](https://github.com/mattpocock/skills/commit/4588b32ecab9ecc9fc8cc6b6c5e7d675b6004b0d),
-downloaded October 5, 2026. Each `source/SOURCE.md` records the upstream path,
-ref, commit, and dates. These reference snapshots do not establish the original
-revision used for the earlier adaptations.
-
-`skills/writing-for-agents` is adapted from `skills/productivity/writing-for-agents`
-at commit [`d81f3a183412e71a5b1e84ca21bc1a35eea03a60`](https://github.com/mattpocock/skills/commit/d81f3a183412e71a5b1e84ca21bc1a35eea03a60),
-added October 2, 2026. Batman preserves source invocation defaults, adjusts the
-description, and documents its invocation default in `SKILL-MECHANICS.md`.
-Its `source/` directory preserves the complete unchanged upstream skill;
-`source/SOURCE.md` records Batman provenance.
-
-`skills/experimental/prototype` is an unmodified copy of `skills/engineering/prototype` from the same repository at commit [`959a8e9f1edc3adbe2f7e3054bb6fbefa6696260`](https://github.com/mattpocock/skills/commit/959a8e9f1edc3adbe2f7e3054bb6fbefa6696260). Its `agents/openai.yaml` also comes from upstream. Batman records and checks the copied directory's content hash in `skills/experimental/sources.tsv`.
-
-`skills/ux/grill-ux` adapts the interview pattern from Batman's `grilling` skill, using the Matt Pocock snapshot described above. `skills/ux/ui-prototype` adapts the prototype skill at the pinned commit above. These custom skills focus on team discussion of UI alternatives, with a conversational design handoff and feature-scoped mock data. They are also informed by Jeff Gothelf's [Lean UX Canvas](https://jeffgothelf.com/blog/how-to-use-the-lean-ux-canvas/). The raw experimental prototype remains unchanged.
-
-The UX skills' `source/` directories preserve the complete upstream `grilling`
-and `prototype` directories, respectively, at commit
-`4588b32ecab9ecc9fc8cc6b6c5e7d675b6004b0d`, downloaded October 5, 2026.
-Their `SOURCE.md` files explain the relationship to the custom skills.
-
-Batman stable skills inherit source invocation defaults, and skills without a source are manual by default. The installer derives target-specific invocation metadata. Dependencies use Matt's explicit "call the Skill tool" convention. The implementation skill follows Matt's review-and-commit close-out. Code review includes uncommitted work when requested and keeps delegation under user control.
-
-Batman adopts v1.3's `GLOSSARY.md` and `GLOSSARY-MAP.md` filenames in the active
-domain-modeling and TDD skills, including the `GLOSSARY-FORMAT.md` template.
-
-Tracker setup references were adapted so the stable skills can use local files or an already configured tracker without requiring Matt's setup skill. Other shared instructions and supporting files remain close to the source. Batman changes only installed projections of the experimental prototype by adding target-specific invocation metadata matching the source default or existing local setting. It does not change the vendored source.
+`skills/experimental/prototype` is an unmodified copy of
+`skills/engineering/prototype` at commit
+[`959a8e9f1edc3adbe2f7e3054bb6fbefa6696260`](https://github.com/mattpocock/skills/commit/959a8e9f1edc3adbe2f7e3054bb6fbefa6696260).
+Its complete directory matches the checked upstream revision above, including
+`agents/openai.yaml`. Batman records its pinned content hash in
+`skills/experimental/sources.tsv`.
 
 MIT License
 

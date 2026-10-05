@@ -14,5 +14,8 @@ This is the first verified source snapshot preserved here. The active skill was
 adapted earlier, so this snapshot does not establish its original revision.
 Git history preserves this snapshot after future refreshes.
 
+The active skill was restored byte-for-byte from upstream on 2026-10-05.
+Its files match main at commit 4588b32ecab9ecc9fc8cc6b6c5e7d675b6004b0d.
+
 See [THIRD_PARTY_NOTICES.md](../../../../THIRD_PARTY_NOTICES.md) for attribution
 and the upstream MIT license.

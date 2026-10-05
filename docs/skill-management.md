@@ -116,7 +116,7 @@ membership that differs from the directory layout, and dependencies outside the
 skill's group. Checking every direct dependency keeps transitive
 dependencies together too.
 
-The groups are `dev-workflow`, `ux`, and `communication`. Installed directories
+The groups are `dev-workflow` and `communication`. Installed directories
 remain flat at `<skills-directory>/<name>`. Skills in the same group remain siblings in both
 layouts. Discovery excludes experimental skills and upstream `source/` snapshots.
 Experimental skills retain their separate manifest and installation commands.

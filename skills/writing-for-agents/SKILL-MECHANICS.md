@@ -4,8 +4,6 @@ The skill-specific branch of [`writing-for-agents`](SKILL.md): what changes when
 
 ## Invocation
 
-Batman stable skills inherit their source's default invocability. Preserve the source's `disable-model-invocation` setting, including omission for model-invoked skills. Skills without a source set `disable-model-invocation: true` by default unless the owner explicitly chooses automatic invocation. The installer derives target invocation metadata and preserves local overrides.
-
 Two choices, trading the two loads:
 
 - A **model-invoked** skill keeps a `description`, so the agent can fire it autonomously, and other skills can reach it. You can still type its name: model-invocation always _includes_ user reach; a description only ever adds agent discovery, never removes the human's. The description is the skill's top-level context pointer, forced to stay loaded at all times: permanent context load in exchange for discoverability. A model-invoked skill whose content is all reference is also one home for shared reference: another skill can invoke it, so reference needed by several skills lives in one place. Mechanics: omit `disable-model-invocation`, and write a model-facing description carrying the trigger branches (the pointer-writing rules in `SKILL.md` apply in full).
@@ -14,10 +12,6 @@ Two choices, trading the two loads:
 Pick model-invocation only when the agent must reach the skill on its own, or another skill must. If it only ever fires by hand, make it user-invoked and pay no context load.
 
 Shared reference that two user-invoked skills both need can live in neither: with no descriptions, neither can fire the other. Push it to a plain file outside the skill system: external reference any skill can point at.
-
-## Dependencies
-
-Use `Call the Skill tool with "name"` to load a model-invoked dependency. For two dependencies, say `Call the Skill tool twice, for "name-a" and "name-b"`. Avoid bare `/name` mentions and cross-skill file paths for operative invocation instructions. Ask the human to invoke manual-only dependencies. Supporting files within a skill still use ordinary file references.
 
 ## Splitting by invocation
 

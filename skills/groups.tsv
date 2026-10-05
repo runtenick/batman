@@ -5,10 +5,8 @@ grilling	dev-workflow	-
 domain-modeling	dev-workflow	-
 to-spec	dev-workflow	-
 to-tickets	dev-workflow	-
-implement	dev-workflow	tdd
+implement	dev-workflow	tdd,code-review
 tdd	dev-workflow	code-review
 code-review	dev-workflow	-
-grill-ux	ux	ui-prototype
-ui-prototype	ux	-
 bro	communication	-
 unslop	communication	-

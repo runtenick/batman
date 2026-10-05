@@ -117,7 +117,10 @@ for skill_dir in "$source_dir"/* "$source_dir"/*/*; do
         errors=$((errors + 1))
     fi
 
-    if [ -f "$metadata_file" ] && has_codex_invocation_policy "$metadata_file"; then
+    if [ -f "$metadata_file" ] && has_codex_invocation_policy "$metadata_file" &&
+        ! { [ -f "$skill_dir/source/SOURCE.md" ] &&
+            [ -f "$skill_dir/source/agents/openai.yaml" ] &&
+            [ "$(hash_file "$metadata_file")" = "$(hash_file "$skill_dir/source/agents/openai.yaml")" ]; }; then
         printf '%s\n' "invalid  $skill_name sets policy.allow_implicit_invocation in canonical agents/openai.yaml; the installer derives that Codex policy from disable-model-invocation." >&2
         errors=$((errors + 1))
     fi
