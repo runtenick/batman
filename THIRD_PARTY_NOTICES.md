@@ -9,6 +9,13 @@
 Its `SOURCE.md` is Batman metadata. This reference snapshot does not change
 the provenance of the earlier adaptation.
 
+The other eight `skills/dev-workflow` skills preserve their complete upstream
+directories at commit
+[`4588b32ecab9ecc9fc8cc6b6c5e7d675b6004b0d`](https://github.com/mattpocock/skills/commit/4588b32ecab9ecc9fc8cc6b6c5e7d675b6004b0d),
+downloaded October 5, 2026. Each `source/SOURCE.md` records the upstream path,
+ref, commit, and dates. These reference snapshots do not establish the original
+revision used for the earlier adaptations.
+
 `skills/writing-for-agents` is adapted from `skills/productivity/writing-for-agents`
 at commit [`d81f3a183412e71a5b1e84ca21bc1a35eea03a60`](https://github.com/mattpocock/skills/commit/d81f3a183412e71a5b1e84ca21bc1a35eea03a60),
 added October 2, 2026. Batman adds manual-only invocation metadata, adjusts the
@@ -19,6 +26,11 @@ Its `source/` directory preserves the complete unchanged upstream skill;
 `skills/experimental/prototype` is an unmodified copy of `skills/engineering/prototype` from the same repository at commit [`959a8e9f1edc3adbe2f7e3054bb6fbefa6696260`](https://github.com/mattpocock/skills/commit/959a8e9f1edc3adbe2f7e3054bb6fbefa6696260). Its `agents/openai.yaml` also comes from upstream. Batman records and checks the copied directory's content hash in `skills/experimental/sources.tsv`.
 
 `skills/ux/grill-ux` adapts the interview pattern from Batman's `grilling` skill, using the Matt Pocock snapshot described above. `skills/ux/ui-prototype` adapts the prototype skill at the pinned commit above. These custom skills focus on team discussion of UI alternatives, with a conversational design handoff and feature-scoped mock data. They are also informed by Jeff Gothelf's [Lean UX Canvas](https://jeffgothelf.com/blog/how-to-use-the-lean-ux-canvas/). The raw experimental prototype remains unchanged.
+
+The UX skills' `source/` directories preserve the complete upstream `grilling`
+and `prototype` directories, respectively, at commit
+`4588b32ecab9ecc9fc8cc6b6c5e7d675b6004b0d`, downloaded October 5, 2026.
+Their `SOURCE.md` files explain the relationship to the custom skills.
 
 Batman keeps every stable skill manual-only and lets the installer derive target-specific invocation metadata. It replaces host-specific skill calls with sibling file references where the workflow requires another included skill. The implementation skill does not commit without explicit permission, and code review keeps delegation under user control.
 
@@ -49,6 +61,13 @@ SOFTWARE.
 ## pstack skills
 
 `skills/communication/unslop` is adapted from [pstack](https://github.com/cursor/plugins/tree/main/pstack), using the local snapshot in `~/skills-db/pstack` on September 12, 2026. Batman narrows its description to durable human-facing prose; the rule body is unchanged. `skills/communication/bro` was supplied from the same project by the repository owner on September 15, 2026 and is unchanged.
+
+Both skills preserve their complete upstream directories in `source/` at
+cursor/plugins commit
+[`e5a8186d7b43be8d6ac4452440fbead5f1a51c70`](https://github.com/cursor/plugins/commit/e5a8186d7b43be8d6ac4452440fbead5f1a51c70),
+downloaded October 5, 2026. Their `source/SOURCE.md` files are Batman metadata.
+These reference snapshots do not establish the original revisions used for the
+earlier copies and adaptations.
 
 MIT License
 

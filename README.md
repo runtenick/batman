@@ -206,10 +206,12 @@ implementation, and review. It includes the skills those stages depend on.
 
 See [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md) for sources, adaptations, and licenses.
 
-Borrowed stable skills can keep an unchanged upstream snapshot in `source/`,
-with provenance and dates in `source/SOURCE.md`. Batman excludes that folder
-from installed copies and active-skill hashes. `implement` is the first skill
-using this layout. Git history preserves earlier snapshots after refreshes.
+Every stable skill borrowed from Matt Pocock or pstack keeps an unchanged
+upstream snapshot in `source/`, with provenance and dates in `source/SOURCE.md`.
+For `grill-ux` and `ui-prototype`, the snapshots preserve the upstream `grilling`
+and `prototype` skills behind those adaptations. Batman excludes source folders
+from installed copies and active-skill hashes. Git history preserves earlier
+snapshots after refreshes.
 
 Use the repository-local `$maintain-skill-sources` skill to check or refresh
 snapshots, for example "Use $maintain-skill-sources to check implement" or

@@ -1,14 +1,17 @@
 # Upstream source
 
 Repository: https://github.com/mattpocock/skills
-Path: skills/engineering/implement
+Path: skills/productivity/grilling
 Ref: main
-Commit: d81f3a183412e71a5b1e84ca21bc1a35eea03a60
-Downloaded: 2026-10-02
-Last checked: 2026-10-02
+Commit: 4588b32ecab9ecc9fc8cc6b6c5e7d675b6004b0d
+Downloaded: 2026-10-05
+Last checked: 2026-10-05
 
 This snapshot contains the complete upstream skill directory. `SOURCE.md` is
 Batman metadata. The other files are unchanged upstream copies.
+
+The active skill adapts Batman's `grilling` interview pattern. This snapshot
+preserves the upstream `grilling` skill behind that adaptation.
 
 This is the first verified source snapshot preserved here. The active skill was
 adapted earlier, so this snapshot does not establish its original revision.

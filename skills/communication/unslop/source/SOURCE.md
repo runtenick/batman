@@ -1,11 +1,11 @@
 # Upstream source
 
-Repository: https://github.com/mattpocock/skills
-Path: skills/engineering/implement
+Repository: https://github.com/cursor/plugins
+Path: pstack/skills/unslop
 Ref: main
-Commit: d81f3a183412e71a5b1e84ca21bc1a35eea03a60
-Downloaded: 2026-10-02
-Last checked: 2026-10-02
+Commit: e5a8186d7b43be8d6ac4452440fbead5f1a51c70
+Downloaded: 2026-10-05
+Last checked: 2026-10-05
 
 This snapshot contains the complete upstream skill directory. `SOURCE.md` is
 Batman metadata. The other files are unchanged upstream copies.
