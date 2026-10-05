@@ -3,10 +3,12 @@ grill-me	dev-workflow	grilling
 grill-with-docs	dev-workflow	grilling,domain-modeling
 grilling	dev-workflow	-
 domain-modeling	dev-workflow	-
-to-spec	dev-workflow	-
-to-tickets	dev-workflow	-
+codebase-design	dev-workflow	-
+setup-matt-pocock-skills	dev-workflow	-
+to-spec	dev-workflow	setup-matt-pocock-skills
+to-tickets	dev-workflow	setup-matt-pocock-skills
 implement	dev-workflow	tdd,code-review
-tdd	dev-workflow	code-review
-code-review	dev-workflow	-
+tdd	dev-workflow	code-review,codebase-design
+code-review	dev-workflow	setup-matt-pocock-skills
 bro	communication	-
 unslop	communication	-

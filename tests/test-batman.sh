@@ -88,9 +88,9 @@ run_group_env() {
         BATMAN_COPILOT_SKILLS_DIR="$group_copilot_dir" "$@"
 }
 output=$(run_group_env "$batman_script" sync --group dev-workflow --target all)
-assert_contains "$output" '18 installed'
+assert_contains "$output" '22 installed'
 for group_destination in "$group_codex_dir" "$group_copilot_dir"; do
-    for group_skill in grill-me grill-with-docs grilling domain-modeling to-spec to-tickets implement tdd code-review; do
+    for group_skill in grill-me grill-with-docs grilling domain-modeling codebase-design setup-matt-pocock-skills to-spec to-tickets implement tdd code-review; do
         [ -f "$group_destination/$group_skill/SKILL.md" ] || fail "missing workflow skill: $group_skill"
     done
     for excluded_skill in bro unslop writing-for-agents prototype; do
@@ -99,6 +99,10 @@ for group_destination in "$group_codex_dir" "$group_copilot_dir"; do
 done
 assert_file_contains "$group_codex_dir/implement/agents/openai.yaml" 'allow_implicit_invocation: false'
 assert_file_contains "$group_copilot_dir/implement/SKILL.md" 'disable-model-invocation: true'
+assert_file_contains "$group_codex_dir/setup-matt-pocock-skills/agents/openai.yaml" 'allow_implicit_invocation: false'
+assert_file_contains "$group_copilot_dir/setup-matt-pocock-skills/SKILL.md" 'disable-model-invocation: true'
+[ -f "$group_codex_dir/setup-matt-pocock-skills/issue-tracker-local.md" ] || fail 'setup template was not installed'
+[ ! -e "$group_codex_dir/setup-matt-pocock-skills/source" ] || fail 'setup source snapshot was installed'
 printf '%s\n' 'group local edit' >> "$group_codex_dir/implement/SKILL.md"
 run_group_env "$batman_script" sync --group dev-workflow --target codex >/dev/null
 assert_file_contains "$group_codex_dir/implement/SKILL.md" 'group local edit'
@@ -168,6 +172,8 @@ assert_contains "$output" 'codex migrated'
 assert_file_contains "$group_codex_dir/implement/SKILL.md" 'group local edit'
 assert_file_contains "$group_codex_dir/implement/.batman-source" "$source_dir/dev-workflow/implement"
 assert_file_contains "$group_codex_dir/tdd/agents/openai.yaml" 'allow_implicit_invocation: true'
+assert_file_contains "$group_codex_dir/codebase-design/agents/openai.yaml" 'allow_implicit_invocation: true'
+[ -f "$group_codex_dir/codebase-design/DESIGN-IT-TWICE.md" ] || fail 'design reference was not installed'
 assert_file_contains "$group_codex_dir/code-review/agents/openai.yaml" 'allow_implicit_invocation: true'
 [ ! -L "$group_codex_dir/code-review" ] || fail 'legacy flat symlink was not migrated'
 
@@ -177,7 +183,7 @@ assert_contains "$output" 'bro'
 case $output in *implement*|*writing-for-agents*) fail 'group status included unrelated skills' ;; esac
 
 output=$(run_group_env "$batman_script" sync --target copilot --group dev-workflow --group=communication --group communication)
-assert_contains "$output" '2 installed, 0 updated, 9 unchanged'
+assert_contains "$output" '2 installed, 0 updated, 11 unchanged'
 [ ! -e "$group_copilot_dir/writing-for-agents" ] || fail 'combined groups installed an ungrouped skill'
 run_group_env "$sync_script" --group communication --target codex >/dev/null
 [ -f "$group_codex_dir/bro/SKILL.md" ] || fail 'direct installer did not select communication'

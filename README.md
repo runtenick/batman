@@ -161,7 +161,7 @@ The repository mirrors those groups:
 
 ```text
 skills/
-├── dev-workflow/       # Nine workflow skills, including dependencies
+├── dev-workflow/       # Eleven workflow skills, including dependencies
 ├── communication/      # bro and unslop
 ├── writing-for-agents/
 ├── experimental/
@@ -179,14 +179,13 @@ implementation, and review. It includes the skills those stages depend on.
 - `grill-with-docs` combines that interview with domain and architecture notes.
 - `grilling` contains the shared interview workflow used by `grill-me` and `grill-with-docs`.
 - `domain-modeling` builds a project glossary and architecture decision records.
+- `setup-matt-pocock-skills` configures each project's issue tracker and domain doc layout. Run it manually once per project; choose local Markdown to keep work under `.scratch/`.
 - `to-spec` turns the current conversation into a spec using the configured tracker.
 - `to-tickets` turns a plan or spec into dependency-aware tracer-bullet tickets using the configured tracker.
 - `implement` builds approved work with TDD where it fits, reviews it, and commits to the current branch.
+- `codebase-design` provides shared guidance for module interfaces, test seams, and comparing design alternatives.
 - `tdd` guides test-first implementation at agreed public seams.
 - `code-review` runs parallel reviews against repository standards and the originating spec.
-
-The unchanged upstream skills refer to `setup-matt-pocock-skills` and
-`codebase-design`. These dependencies are not included in Batman.
 
 ### communication
 

@@ -2,7 +2,7 @@
 
 ## Matt Pocock skills
 
-The nine skills in `skills/dev-workflow/` and `skills/writing-for-agents` come
+The eleven skills in `skills/dev-workflow/` and `skills/writing-for-agents` come
 from [mattpocock/skills](https://github.com/mattpocock/skills). Batman checked
 all source directories against upstream `main` at commit
 [`4588b32ecab9ecc9fc8cc6b6c5e7d675b6004b0d`](https://github.com/mattpocock/skills/commit/4588b32ecab9ecc9fc8cc6b6c5e7d675b6004b0d)
