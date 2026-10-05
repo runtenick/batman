@@ -1,7 +1,6 @@
 ---
 name: writing-for-agents
 description: Write and edit documents that agents consume, including skills, AGENTS.md, and CLAUDE.md.
-disable-model-invocation: true
 ---
 
 Reference for writing any document an agent consumes: a skill, an `AGENTS.md` / `CLAUDE.md`, a doc reached by a pointer. The packaging differs; the writing does not: the same levers make each one predictable, since the agent takes the same _process_ every run rather than producing the same output.

@@ -44,13 +44,18 @@ raw_skill_hash() {
 }
 
 portable_invocation_policy() {
-    awk '
+    awk -v allow_missing="${2:-false}" '
         NR == 1 && $0 == "---" {
             in_frontmatter = 1
             next
         }
         in_frontmatter && $0 == "---" {
             in_frontmatter = 0
+            if (count == 0 && allow_missing == "true") {
+                valid = 1
+                print "false"
+                exit 0
+            }
             if (count == 1 && (value == "true" || value == "false")) {
                 valid = 1
                 print value
@@ -102,8 +107,13 @@ for skill_dir in "$source_dir"/* "$source_dir"/*/*; do
         continue
     fi
 
-    if ! portable_invocation_policy "$skill_file" >/dev/null; then
-        printf '%s\n' "invalid  $skill_name must set disable-model-invocation to exactly true or false in SKILL.md (true is Batman's default)." >&2
+    allow_missing=false
+    if [ -f "$skill_dir/source/SOURCE.md" ] && [ -f "$skill_dir/source/SKILL.md" ] &&
+        [ "$(portable_invocation_policy "$skill_dir/source/SKILL.md" true)" = false ]; then
+        allow_missing=true
+    fi
+    if ! portable_invocation_policy "$skill_file" "$allow_missing" >/dev/null; then
+        printf '%s\n' "invalid  $skill_name must set disable-model-invocation to exactly true or false, or omit it for a model-invoked source (skills without a source are manual by default)." >&2
         errors=$((errors + 1))
     fi
 

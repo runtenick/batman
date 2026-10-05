@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # Grouped skills live one directory below the skills root. Installations remain
-# flat so agents discover skills and sibling references continue to work.
+# flat so agents discover each skill by name.
 selected_groups=
 
 is_stable_skill_dir() {
@@ -12,6 +12,25 @@ is_stable_skill_dir() {
     [ "$stable_parent" != "$source_dir/experimental" ] || return 1
     # An ungrouped skill may contain an upstream source/SKILL.md snapshot.
     [ ! -f "$stable_parent/SKILL.md" ]
+}
+
+# Canonical fields preserve source defaults. Omitted fields are automatic only
+# with a recorded source; an unprovenanced skill falls back to manual.
+default_skill_invocation() {
+    default_skill_dir=$1
+    default_policy=$(portable_invocation_policy "$default_skill_dir/SKILL.md")
+    if [ -z "$default_policy" ] && [ -f "$default_skill_dir/source/SOURCE.md" ] &&
+        [ -f "$default_skill_dir/source/SKILL.md" ]; then
+        default_policy=false
+    fi
+    case $default_skill_dir in
+        "$source_dir"/experimental/*) default_policy=${default_policy:-false} ;;
+    esac
+    if [ "$default_policy" = false ]; then
+        printf '%s\n' automatic
+    else
+        printf '%s\n' manual
+    fi
 }
 
 stable_skill_source() {

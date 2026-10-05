@@ -59,8 +59,8 @@ may be missed, and old skill copies can remain after an agent is removed.
 Portable copies alone do not count as Codex installations.
 
 If neither agent is found, ordinary skill commands use portable mode and show
-the destination, `~/.agents/skills` by default. This gives you manual-only skill
-files without requiring an agent. Experimental commands require a Codex or
+the destination, `~/.agents/skills` by default. This gives you skill files with
+their source invocation defaults without requiring an agent. Experimental commands require a Codex or
 Copilot choice. Pass `--target` to choose explicitly:
 
 ```sh
@@ -146,9 +146,9 @@ for the recognized locations.
 
 `sync` installs missing skills and updates clean managed copies. It preserves locally modified copies and reports a conflict when both the source and installed copy changed. It also migrates symlinks created by older Batman versions when they point to this checkout.
 
-`experimental list` shows raw skills available for testing. `experimental add` installs one for Codex, Copilot, or both as manual-only. When `--target` is omitted, it follows the detected-agent behavior above. The command does not change the vendored files. `experimental remove` removes the managed copies and asks first if a copy has local changes. Ordinary `sync` ignores experimental skills.
+`experimental list` shows raw skills available for testing. `experimental add` installs one for Codex, Copilot, or both with its source invocation default. When `--target` is omitted, it follows the detected-agent behavior above. The command does not change the vendored files. `experimental remove` removes the managed copies and asks first if a copy has local changes. Ordinary `sync` ignores experimental skills.
 
-Every stable skill sets `disable-model-invocation: true`, so skills start as manual-only. Copilot and portable copies use that field for their local invocation mode. Codex copies remove the unsupported field and store the local mode as `policy.allow_implicit_invocation` in `agents/openai.yaml`.
+Stable skills inherit their source's default invocability. Skills without a source are manual by default. Matt-derived skills keep his manual or model-invoked defaults, including the UX adaptations. Fresh installations use these defaults; synchronization preserves existing local invocation settings. Copilot and portable copies use `disable-model-invocation` for their local invocation mode. Codex copies remove the unsupported field and store the local mode as `policy.allow_implicit_invocation` in `agents/openai.yaml`.
 
 See [docs/skill-management.md](./docs/skill-management.md) for the state and update model.
 

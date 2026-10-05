@@ -96,12 +96,61 @@ printf '%s\n' 'group local edit' >> "$group_codex_dir/implement/SKILL.md"
 run_group_env "$batman_script" sync --group dev-workflow --target codex >/dev/null
 assert_file_contains "$group_codex_dir/implement/SKILL.md" 'group local edit'
 
+printf '%s\n' 'Testing source invocation defaults and local overrides...'
+for automatic_skill in grilling domain-modeling tdd code-review; do
+    assert_file_contains "$group_codex_dir/$automatic_skill/agents/openai.yaml" 'allow_implicit_invocation: true'
+    assert_file_contains "$group_copilot_dir/$automatic_skill/SKILL.md" 'disable-model-invocation: false'
+done
+run_group_env "$batman_script" disable tdd --target codex >/dev/null
+run_group_env "$batman_script" sync --group dev-workflow --target codex >/dev/null
+assert_file_contains "$group_codex_dir/tdd/agents/openai.yaml" 'allow_implicit_invocation: false'
+run_group_env "$batman_script" enable tdd --target codex >/dev/null
+
+# An independent collection checks sourced manual/automatic and unsourced manual
+# defaults in each projection without changing the main fixture inventory.
+default_source_dir="$test_root/default-sources"
+mkdir -p "$default_source_dir"
+cp -R "$source_dir/dev-workflow/implement" "$default_source_dir/implement"
+cp -R "$source_dir/dev-workflow/tdd" "$default_source_dir/tdd"
+mkdir -p "$default_source_dir/local-skill"
+printf '%s\n' '---' 'name: local-skill' 'description: A local skill.' \
+    'disable-model-invocation: true' '---' 'Follow local instructions.' \
+    > "$default_source_dir/local-skill/SKILL.md"
+"$check_script" "$default_source_dir" >/dev/null
+for default_target in codex copilot portable; do
+    default_destination="$test_root/default-$default_target"
+    run_env env BATMAN_SOURCE_DIR="$default_source_dir" \
+        BATMAN_CODEX_SKILLS_DIR="$default_destination" \
+        BATMAN_COPILOT_SKILLS_DIR="$default_destination" \
+        BATMAN_PORTABLE_SKILLS_DIR="$default_destination" \
+        "$batman_script" sync --target "$default_target" >/dev/null
+    if [ "$default_target" = codex ]; then
+        assert_file_contains "$default_destination/tdd/agents/openai.yaml" 'allow_implicit_invocation: true'
+        assert_file_contains "$default_destination/implement/agents/openai.yaml" 'allow_implicit_invocation: false'
+        assert_file_contains "$default_destination/local-skill/agents/openai.yaml" 'allow_implicit_invocation: false'
+    else
+        assert_file_contains "$default_destination/tdd/SKILL.md" 'disable-model-invocation: false'
+        assert_file_contains "$default_destination/implement/SKILL.md" 'disable-model-invocation: true'
+        assert_file_contains "$default_destination/local-skill/SKILL.md" 'disable-model-invocation: true'
+    fi
+done
+awk '!/^disable-model-invocation:/' "$default_source_dir/local-skill/SKILL.md" > "$test_root/local-skill.md"
+cp "$test_root/local-skill.md" "$default_source_dir/local-skill/SKILL.md"
+if "$check_script" "$default_source_dir" >/dev/null 2>&1; then
+    fail 'a skill without a source must declare its invocation policy'
+fi
+printf '%s\n' '---' 'name: local-skill' 'disable-model-invocation: sometimes' '---' \
+    > "$default_source_dir/local-skill/SKILL.md"
+if "$check_script" "$default_source_dir" >/dev/null 2>&1; then
+    fail 'malformed invocation policies must fail validation'
+fi
+
 printf '%s\n' 'Testing migration from flat source paths...'
 for migrated_skill in implement tdd; do
     printf '%s\ncodex\n' "$source_dir/$migrated_skill" > "$group_codex_dir/$migrated_skill/.batman-source"
 done
 output=$(run_group_env "$batman_script" status --group dev-workflow --target codex)
-assert_contains "$output" 'tdd                codex            manual       clean        current'
+assert_contains "$output" 'tdd                codex            automatic    clean        current'
 run_group_env "$batman_script" update tdd --target codex >/dev/null
 run_group_env "$batman_script" enable tdd --target codex >/dev/null
 run_group_env "$batman_script" enable code-review --target codex >/dev/null
@@ -128,7 +177,7 @@ run_group_env "$sync_script" --group ux --target codex >/dev/null
 group_portable_dir="$test_root/group-portable"
 run_group_env env BATMAN_PORTABLE_SKILLS_DIR="$group_portable_dir" \
     "$batman_script" sync --group ux --target portable >/dev/null
-assert_file_contains "$group_portable_dir/ui-prototype/SKILL.md" 'disable-model-invocation: true'
+assert_file_contains "$group_portable_dir/ui-prototype/SKILL.md" 'disable-model-invocation: false'
 [ ! -e "$group_portable_dir/implement" ] || fail 'portable group sync installed a workflow skill'
 
 for group_command in "$batman_script" "$sync_script"; do
@@ -267,13 +316,13 @@ assert_file_contains "$codex_dir/unslop/agents/openai.yaml" 'allow_implicit_invo
 
 printf '%s\n' 'Testing explicit experimental skill management...'
 output=$(run_env "$batman_script" experimental list 2>&1)
-assert_contains "$output" 'prototype          codex            manual       missing      current'
+assert_contains "$output" 'prototype          codex            automatic    missing      current'
 
 output=$(run_env "$batman_script" experimental add prototype 2>&1)
 assert_contains "$output" 'codex installed'
 cmp "$source_dir/experimental/prototype/SKILL.md" "$codex_dir/prototype/SKILL.md" >/dev/null || fail 'experimental SKILL.md projection'
 assert_file_contains "$codex_dir/prototype/agents/openai.yaml" 'display_name: "Prototype"'
-assert_file_contains "$codex_dir/prototype/agents/openai.yaml" 'allow_implicit_invocation: false'
+assert_file_contains "$codex_dir/prototype/agents/openai.yaml" 'allow_implicit_invocation: true'
 if grep -F 'allow_implicit_invocation' "$source_dir/experimental/prototype/agents/openai.yaml" >/dev/null 2>&1; then
     fail 'experimental add should not modify vendored metadata'
 fi
@@ -281,12 +330,21 @@ fi
 output=$(run_env "$batman_script" experimental add prototype 2>&1)
 assert_contains "$output" 'codex unchanged'
 output=$(run_env "$batman_script" experimental list 2>&1)
-assert_contains "$output" 'prototype          codex            manual       clean        current'
+assert_contains "$output" 'prototype          codex            automatic    clean        current'
 
+# Re-adding an experiment preserves an installed invocation override.
+awk '{ sub(/allow_implicit_invocation: true/, "allow_implicit_invocation: false"); print }' \
+    "$codex_dir/prototype/agents/openai.yaml" > "$test_root/prototype-manual.yaml"
+cp "$test_root/prototype-manual.yaml" "$codex_dir/prototype/agents/openai.yaml"
+run_env "$batman_script" experimental add prototype --target codex >/dev/null
+assert_file_contains "$codex_dir/prototype/agents/openai.yaml" 'allow_implicit_invocation: false'
+awk '{ sub(/allow_implicit_invocation: false/, "allow_implicit_invocation: true"); print }' \
+    "$codex_dir/prototype/agents/openai.yaml" > "$test_root/prototype-automatic.yaml"
+cp "$test_root/prototype-automatic.yaml" "$codex_dir/prototype/agents/openai.yaml"
 cp "$codex_dir/prototype/agents/openai.yaml" "$test_root/prototype-openai.yaml"
 printf '%s\n' '  custom_policy: true' >> "$codex_dir/prototype/agents/openai.yaml"
 output=$(run_env "$batman_script" experimental list 2>&1)
-assert_contains "$output" 'prototype          codex            manual       modified     current'
+assert_contains "$output" 'prototype          codex            automatic    modified     current'
 cp "$test_root/prototype-openai.yaml" "$codex_dir/prototype/agents/openai.yaml"
 
 if output=$(run_env "$batman_script" enable prototype --target codex 2>&1); then
@@ -295,13 +353,13 @@ fi
 assert_contains "$output" 'unknown skill: prototype'
 
 output=$(run_env "$batman_script" experimental list --target all 2>&1)
-assert_contains "$output" 'prototype          codex            manual       clean        current'
-assert_contains "$output" 'prototype          copilot          manual       missing      current'
+assert_contains "$output" 'prototype          codex            automatic    clean        current'
+assert_contains "$output" 'prototype          copilot          automatic    missing      current'
 
 output=$(run_env "$batman_script" experimental add prototype --target all 2>&1)
 assert_contains "$output" 'codex unchanged'
 assert_contains "$output" 'copilot installed'
-assert_file_contains "$copilot_dir/prototype/SKILL.md" 'disable-model-invocation: true'
+assert_file_contains "$copilot_dir/prototype/SKILL.md" 'disable-model-invocation: false'
 cmp "$source_dir/experimental/prototype/LOGIC.md" "$copilot_dir/prototype/LOGIC.md" >/dev/null || fail 'experimental Copilot LOGIC.md projection'
 cmp "$source_dir/experimental/prototype/UI.md" "$copilot_dir/prototype/UI.md" >/dev/null || fail 'experimental Copilot UI.md projection'
 cmp "$source_dir/experimental/prototype/agents/openai.yaml" "$copilot_dir/prototype/agents/openai.yaml" >/dev/null || fail 'experimental Copilot metadata projection'
@@ -310,7 +368,7 @@ if grep -F 'disable-model-invocation' "$source_dir/experimental/prototype/SKILL.
 fi
 
 output=$(run_env "$batman_script" experimental list --target copilot 2>&1)
-assert_contains "$output" 'prototype          copilot          manual       clean        current'
+assert_contains "$output" 'prototype          copilot          automatic    clean        current'
 
 output=$(run_env "$batman_script" experimental add prototype --target copilot 2>&1)
 assert_contains "$output" 'copilot unchanged'
@@ -318,7 +376,7 @@ invocation_count=$(grep -c '^disable-model-invocation:' "$copilot_dir/prototype/
 [ "$invocation_count" -eq 1 ] || fail 'repeated Copilot add should keep one invocation field'
 
 run_env "$batman_script" sync --target copilot >/dev/null
-assert_file_contains "$copilot_dir/prototype/SKILL.md" 'disable-model-invocation: true'
+assert_file_contains "$copilot_dir/prototype/SKILL.md" 'disable-model-invocation: false'
 
 output=$(run_env "$batman_script" experimental remove prototype --target copilot 2>&1)
 assert_contains "$output" 'copilot removed'
@@ -333,7 +391,7 @@ fi
 assert_contains "$output" 'experimental skills support codex, copilot, or all'
 
 run_env "$batman_script" sync --target codex >/dev/null
-assert_file_contains "$codex_dir/prototype/agents/openai.yaml" 'allow_implicit_invocation: false'
+assert_file_contains "$codex_dir/prototype/agents/openai.yaml" 'allow_implicit_invocation: true'
 
 printf '%s\n' 'local experiment edit' >> "$codex_dir/prototype/UI.md"
 output=$(printf 'n\n' | run_env "$batman_script" experimental remove prototype 2>&1)

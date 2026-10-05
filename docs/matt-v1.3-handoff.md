@@ -9,24 +9,27 @@ It authorizes no further changes. Review each item separately with the owner.
 Batman now uses `GLOSSARY.md` and `GLOSSARY-MAP.md` in the active
 `domain-modeling` and `tdd` skills. The root glossary is `GLOSSARY.md`, and the
 domain-modeling template is `GLOSSARY-FORMAT.md`. Glossary content and the
-skills' manual-only invocation defaults are preserved.
+invocation defaults were preserved during that migration. The later invocation
+policy change is recorded below.
 
 Other projects using these skills need their old glossary filenames and
 references migrated together. Confirm that an existing `CONTEXT.md` is a domain
 glossary before renaming it, and check for an existing `GLOSSARY.md` to avoid
 overwriting or splitting the vocabulary.
 
-## Dependency loading, pending review
+## Dependency loading, adopted after review
 
-`skills/dev-workflow/implement/SKILL.md` still says `Use /tdd`.
-Matt's release explicitly loads dependencies through a Skill tool. Batman's
-`grill-me` and `grill-with-docs` already use sibling file references instead.
+The owner subsequently chose Matt's dependency invocation format. `grill-me`
+and `grill-with-docs` now call the Skill tool with their included dependencies,
+and `implement` explicitly calls it with "tdd" instead of a bare `/tdd` mention.
+This wording requests skill invocation through the agent's available mechanism;
+it does not require Claude Code or a literal tool named `Skill`.
 
-Review whether `implement` should explicitly read and follow
-`../tdd/SKILL.md`, and whether that should become the common convention for
-included dependencies across Batman's supported agents. Keep model invocation
-and delegation under the owner's control. No dependency instructions were
-changed in the glossary migration.
+Stable skills now inherit their source's default invocability, including the
+Matt-derived UX adaptations. Skills without a source are manual by default.
+Fresh installations use these defaults; existing local invocation settings are
+preserved. Experimental projections also inherit source defaults after explicit
+addition. Model choice and delegation remain under the owner's control.
 
 ## Implementation close-out, pending review
 

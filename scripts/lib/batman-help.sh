@@ -112,7 +112,7 @@ HELP
             esac
             cat <<'HELP'
 
-Browse raw skills under evaluation. Add one explicitly to try it as manual-only.
+Browse raw skills under evaluation. Add one explicitly to try it with its source invocation default.
 Adding installs or refreshes a clean copy; local edits are preserved.
 Removing deletes only Batman-managed copies and asks before removing local edits.
 Ordinary sync does not install these skills. Portable mode is not supported.

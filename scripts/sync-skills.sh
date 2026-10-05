@@ -336,6 +336,7 @@ render_portable_skill() {
             } else {
                 print "disable-model-invocation: true"
             }
+            found_invocation = 1
             next
         }
         NR == 1 && $0 == "---" {
@@ -344,6 +345,13 @@ render_portable_skill() {
             next
         }
         in_frontmatter && $0 == "---" {
+            if (!found_invocation) {
+                if (invocation == "automatic") {
+                    print "disable-model-invocation: false"
+                } else {
+                    print "disable-model-invocation: true"
+                }
+            }
             in_frontmatter = 0
             print
             next
@@ -493,7 +501,7 @@ install_target() {
             printf '%-18s %s\n' "$target_name updated" "$skill_name"
             updated=$((updated + 1))
         else
-            invocation=$(state_get "$state_file" invocation "$skill_name" 2>/dev/null || printf '%s\n' manual)
+            invocation=$(state_get "$state_file" invocation "$skill_name" 2>/dev/null || default_skill_invocation "$skill_dir")
             render_projection "$skill_dir" "$projection_dir" "$projection_kind" "$invocation"
             mv "$projection_dir" "$destination"
             installed_hash=$(managed_hash "$destination")

@@ -18,7 +18,7 @@ revision used for the earlier adaptations.
 
 `skills/writing-for-agents` is adapted from `skills/productivity/writing-for-agents`
 at commit [`d81f3a183412e71a5b1e84ca21bc1a35eea03a60`](https://github.com/mattpocock/skills/commit/d81f3a183412e71a5b1e84ca21bc1a35eea03a60),
-added October 2, 2026. Batman adds manual-only invocation metadata, adjusts the
+added October 2, 2026. Batman preserves source invocation defaults, adjusts the
 description, and documents its invocation default in `SKILL-MECHANICS.md`.
 Its `source/` directory preserves the complete unchanged upstream skill;
 `source/SOURCE.md` records Batman provenance.
@@ -32,12 +32,12 @@ and `prototype` directories, respectively, at commit
 `4588b32ecab9ecc9fc8cc6b6c5e7d675b6004b0d`, downloaded October 5, 2026.
 Their `SOURCE.md` files explain the relationship to the custom skills.
 
-Batman keeps every stable skill manual-only and lets the installer derive target-specific invocation metadata. It replaces host-specific skill calls with sibling file references where the workflow requires another included skill. The implementation skill does not commit without explicit permission, and code review keeps delegation under user control.
+Batman stable skills inherit source invocation defaults, and skills without a source are manual by default. The installer derives target-specific invocation metadata. Dependencies use Matt's explicit "call the Skill tool" convention. The implementation skill does not commit without explicit permission, and code review keeps delegation under user control.
 
 Batman adopts v1.3's `GLOSSARY.md` and `GLOSSARY-MAP.md` filenames in the active
 domain-modeling and TDD skills, including the `GLOSSARY-FORMAT.md` template.
 
-Tracker setup references were adapted so the stable skills can use local files or an already configured tracker without requiring Matt's setup skill. Other shared instructions and supporting files remain close to the source. Batman changes only installed projections of the experimental prototype by adding target-specific manual-only invocation metadata. It does not change the vendored source.
+Tracker setup references were adapted so the stable skills can use local files or an already configured tracker without requiring Matt's setup skill. Other shared instructions and supporting files remain close to the source. Batman changes only installed projections of the experimental prototype by adding target-specific invocation metadata matching the source default or existing local setting. It does not change the vendored source.
 
 MIT License
 

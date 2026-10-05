@@ -1,7 +1,6 @@
 ---
 name: tdd
 description: Test-driven development. Use when the user wants to build features or fix bugs test-first, mentions "red-green-refactor", or wants integration tests.
-disable-model-invocation: true
 ---
 
 # Test-Driven Development
@@ -24,7 +23,7 @@ A **seam** is the public boundary you test at: the interface where you observe b
 
 Ask: "What's the public interface, and which seams should we test?"
 
-When the shape of that interface is itself in question, agree it with the user before testing. If the `codebase-design` skill is installed and the user selects it, consult it for the module, interface, depth, seam, adapter, leverage, and locality vocabulary.
+When the shape of that interface is itself in question, agree it with the user before testing. If the `codebase-design` skill is installed and the user selects it, call the Skill tool with "codebase-design" for the module, interface, depth, seam, adapter, leverage, and locality vocabulary.
 
 ## Anti-patterns
 
@@ -36,4 +35,4 @@ When the shape of that interface is itself in question, agree it with the user b
 
 - **Red before green.** Write the failing test first, then only enough code to pass it. Don't anticipate future tests or add speculative features.
 - **One slice at a time.** One seam, one test, one minimal implementation per cycle.
-- **Refactoring is not part of the loop.** It belongs to the review stage (see the `code-review` skill), not the red → green implementation cycle.
+- **Refactoring is not part of the loop.** It belongs to the review stage, not the red → green implementation cycle. At that stage, call the Skill tool with "code-review" when review is requested.

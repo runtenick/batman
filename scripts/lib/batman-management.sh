@@ -465,7 +465,7 @@ experimental_skill_state() {
     projection_kind=$(target_projection_kind "$target_name")
     destination="$destination_dir/$skill_name"
     state_file="$destination_dir/.batman/state.tsv"
-    experimental_invocation=manual
+    experimental_invocation=$(default_skill_invocation "$skill_source")
     experimental_local_state=missing
     experimental_update_state=current
 
@@ -532,6 +532,7 @@ add_experimental_skill() {
     destination="$destination_dir/$skill_name"
     state_file="$destination_dir/.batman/state.tsv"
     source_hash=$(managed_hash "$skill_source")
+    invocation=$(default_skill_invocation "$skill_source")
 
     mkdir -p "$destination_dir" "$management_work_dir/experimental/$target_name"
 
@@ -541,14 +542,15 @@ add_experimental_skill() {
             return 1
         fi
 
+        invocation=$(existing_invocation "$projection_kind" "$destination")
         current_hash=$(managed_hash "$destination")
         previous_source_hash=$(state_get "$state_file" source-hash "$skill_name" 2>/dev/null || true)
         previous_installed_hash=$(state_get "$state_file" installed-hash "$skill_name" 2>/dev/null || true)
 
         if [ -z "$previous_source_hash" ] || [ -z "$previous_installed_hash" ]; then
-            write_invocation "$projection_kind" "$destination" manual
+            write_invocation "$projection_kind" "$destination" "$invocation"
             installed_hash=$(managed_hash "$destination")
-            state_set "$state_file" invocation "$skill_name" manual
+            state_set "$state_file" invocation "$skill_name" "$invocation"
             state_set "$state_file" source-hash "$skill_name" "$source_hash"
             state_set "$state_file" installed-hash "$skill_name" "$installed_hash"
             printf '%s migrated     %s (baseline recorded; existing copy preserved)\n' "$target_name" "$skill_name"
@@ -565,15 +567,15 @@ add_experimental_skill() {
         fi
 
         if [ "$source_hash" = "$previous_source_hash" ]; then
-            write_invocation "$projection_kind" "$destination" manual
-            state_set "$state_file" invocation "$skill_name" manual
+            write_invocation "$projection_kind" "$destination" "$invocation"
+            state_set "$state_file" invocation "$skill_name" "$invocation"
             printf '%s unchanged    %s\n' "$target_name" "$skill_name"
             return 0
         fi
     fi
 
     projection_dir="$management_work_dir/experimental/$target_name/$skill_name"
-    render_update_projection "$skill_source" "$projection_dir" "$projection_kind" manual
+    render_update_projection "$skill_source" "$projection_dir" "$projection_kind" "$invocation"
 
     if [ -e "$destination" ] || [ -L "$destination" ]; then
         if ! replace_projection "$destination" "$projection_dir"; then
@@ -587,7 +589,7 @@ add_experimental_skill() {
     fi
 
     installed_hash=$(managed_hash "$destination")
-    state_set "$state_file" invocation "$skill_name" manual
+    state_set "$state_file" invocation "$skill_name" "$invocation"
     state_set "$state_file" source-hash "$skill_name" "$source_hash"
     state_set "$state_file" installed-hash "$skill_name" "$installed_hash"
     printf '%s %-12s %s\n' "$target_name" "$action" "$skill_name"
@@ -647,7 +649,7 @@ status_target() {
         skill_selected "$skill_name" || continue
         destination="$destination_dir/$skill_name"
         source_hash=$(managed_hash "$skill_dir")
-        invocation=manual
+        invocation=$(default_skill_invocation "$skill_dir")
         local_state=missing
         update_state=current
 

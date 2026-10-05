@@ -1,7 +1,6 @@
 ---
 name: code-review
 description: Review changes since a fixed point along separate Standards and Spec axes. Use for a branch, PR, work-in-progress changes, or a request to review since a commit, branch, tag, or merge-base.
-disable-model-invocation: true
 ---
 
 Review the diff between `HEAD` and a fixed point along two axes:

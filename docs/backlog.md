@@ -47,7 +47,7 @@ outside this backlog.
 - Installation should leave existing copies alone. Updates should be explicit.
 - Preserve local edits and invocation preferences. Replacing edits requires
   inspection, confirmation, and a recoverable backup.
-- Skills start manual-only. Experimental installation remains an explicit choice,
+- Stable skills inherit source invocation defaults; skills without a source start manual-only. Experimental installation remains an explicit choice,
   and vendored source files remain unchanged.
 - Keep existing commands compatible or document their migration.
 - Defer a marketplace, accounts, custom-skill publishing, automatic merging,
