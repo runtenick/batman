@@ -21,26 +21,26 @@ repo_dir=$(CDPATH= cd -- "$script_dir/.." && pwd)
 batman_config_dir=${XDG_CONFIG_HOME:-"$HOME/.config"}/batman
 default_profile_file="$batman_config_dir/default-profile"
 
+# Handle help before loading installation state, validating sources, or prompting.
+# shellcheck source=scripts/lib/batman-help.sh
+. "$script_dir/lib/batman-help.sh"
+help_command=${1:-}
+help_action=${2:-}
+usage() { command_help "$help_command" "$help_action"; }
+if [ "$#" -eq 0 ]; then
+    intro_help
+    exit 0
+fi
+for help_argument in "$@"; do
+    case $help_argument in
+        -h|--help) usage; exit $? ;;
+    esac
+done
+
 # shellcheck source=scripts/lib/batman-management.sh
 . "$script_dir/lib/batman-management.sh"
 management_work_dir=$(mktemp -d "${TMPDIR:-/tmp}/batman-command.XXXXXX")
 trap 'rm -rf "$management_work_dir"' EXIT HUP INT TERM
-
-usage() {
-    printf '%s\n' "Usage: $0 groups"
-    printf '%s\n' "       $0 scan [<dir>] [--include-unknown]"
-    printf '%s\n' "       $0 status [--target codex|copilot|portable|all] [--group <name>]..."
-    printf '%s\n' "       $0 enable <skill> [--target codex|copilot|portable|all]"
-    printf '%s\n' "       $0 disable <skill> [--target codex|copilot|portable|all]"
-    printf '%s\n' "       $0 sync [--target codex|copilot|portable|all] [--group <name>]..."
-    printf '%s\n' "       $0 update <skill> [--target codex|copilot|portable|all]"
-    printf '%s\n' "       $0 experimental list [--target codex|copilot|all]"
-    printf '%s\n' "       $0 experimental add <skill> [--target codex|copilot|all]"
-    printf '%s\n' "       $0 experimental remove <skill> [--target codex|copilot|all]"
-    printf '%s\n' "       $0 config get default-profile"
-    printf '%s\n' "       $0 config set default-profile <codex|copilot>"
-    printf '%s\n' "       $0 config unset default-profile"
-}
 
 get_default_profile() {
     [ -f "$default_profile_file" ] || return 1
@@ -106,7 +106,7 @@ agent_target_available() {
             ;;
     esac
 
-    if command -v "$cli_name" >/dev/null 2>&1 || [ -f "$agent_destination_dir/.batman/state.tsv" ]; then
+    if command -v "$cli_name" >/dev/null 2>&1; then
         return 0
     fi
 
@@ -120,7 +120,11 @@ agent_target_available() {
         installed_skill="$agent_destination_dir/${source_skill##*/}"
 
         if [ -f "$installed_skill/.batman-source" ] && stable_source_matches "$(sed -n '1p' "$installed_skill/.batman-source")" "$source_skill"; then
-            return 0
+            # Portable copies share Codex's default folder but do not prove
+            # that Codex is present. Codex projections identify themselves.
+            if [ "$agent_name" != codex ] || [ "$(sed -n '2p' "$installed_skill/.batman-source")" = codex ]; then
+                return 0
+            fi
         fi
         if [ -L "$installed_skill" ] && stable_source_matches "$(readlink "$installed_skill")" "$source_skill"; then
             return 0
@@ -158,14 +162,20 @@ resolve_implicit_target() {
 
     case $available_count in
         0)
-            target=$default_target
+            if [ "$default_target" = experimental ]; then
+                printf '%s\n' 'batman: no supported agent found; experimental skills require --target codex or --target copilot' >&2
+                return 2
+            fi
+            target=portable
+            printf 'No supported agent found. Using portable skills at %s.\n' "$portable_destination_dir" >&2
             ;;
         1)
             target=$first_available
             ;;
         *)
             if [ ! -t 0 ] || [ ! -r /dev/tty ]; then
-                printf '%s\n' 'batman: multiple agents are available; specify --target codex, --target copilot, or --target all' >&2
+                printf '%s\n' 'batman: multiple agents are available; choose --target codex, --target copilot, or --target all' >&2
+                printf '%s\n' 'To remember your choice: batman config set default-profile codex' '                     or: batman config set default-profile copilot' >&2
                 return 2
             fi
 
@@ -180,15 +190,27 @@ resolve_implicit_target() {
                 case $selection in
                     1)
                         target=$first_available
-                        return 0
+                        break
                         ;;
                     2)
                         target=$second_available
-                        return 0
+                        break
                         ;;
                     *)
                         printf '%s\n' 'Enter 1 or 2.' >/dev/tty
                         ;;
+                esac
+            done
+            while :; do
+                printf 'Use %s as your default agent for future commands? [y/N]: ' "$target" >/dev/tty
+                if ! IFS= read -r save_default </dev/tty; then
+                    printf '\n' >/dev/tty
+                    return 2
+                fi
+                case $save_default in
+                    y|Y|yes|YES) set_default_profile "$target" || return 1; break ;;
+                    ''|n|N|no|NO) break ;;
+                    *) printf '%s\n' 'Enter y or n.' >/dev/tty ;;
                 esac
             done
             ;;
@@ -246,7 +268,7 @@ parse_target() {
     done
 
     if [ "$target_specified" -eq 0 ]; then
-        resolve_implicit_target all || return 2
+        resolve_implicit_target portable || return 2
     fi
 
     validate_target "$target" || return 2
@@ -283,7 +305,7 @@ parse_experimental_target() {
     done
 
     if [ "$target_specified" -eq 0 ]; then
-        resolve_implicit_target codex || return 2
+        resolve_implicit_target experimental || return 2
     fi
 
     case $target in
@@ -430,7 +452,7 @@ case ${1:-} in
         for sync_group in $selected_groups; do
             set -- "$@" --group "$sync_group"
         done
-        exec "$script_dir/install.sh" "$@"
+        "$script_dir/sync-skills.sh" "$@"
         ;;
     status)
         shift

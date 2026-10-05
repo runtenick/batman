@@ -10,22 +10,31 @@ This repo is __two things.__
 
 ## Install
 
-Clone the repository, then run this command from its root:
+Clone the repository, then make `batman` available as a command:
 
 ```sh
-./scripts/install.sh --install-command
+git clone https://github.com/runtenick/batman.git
+cd batman
+./scripts/install.sh
+batman
 ```
 
-This installs the skills for Codex and Copilot CLI, then links `batman` into `~/.local/bin`. Add that directory to `PATH` if needed. The link points to the checkout, so the command uses the current repository code.
+Setup installs only the command. It links `batman` into `~/.local/bin` and
+shows how to add that directory to `PATH` if needed. Keep the checkout: the
+command uses its current code and bundled skills.
 
-To install skills without the command link, or to choose one target:
+Browse the skills, install a group, and check the result:
 
 ```sh
-./scripts/batman sync
-./scripts/batman sync --target codex
-./scripts/batman sync --target copilot
-./scripts/batman sync --target portable
+batman groups
+batman sync --group dev-workflow
+batman status
 ```
+
+`sync` installs missing skills and refreshes clean managed copies. Omit
+`--group` to synchronize all stable skills. Experimental skills are added
+separately. Use `batman <command> --help` for instructions and examples,
+including `batman enable --help` before choosing a skill.
 
 Choose a group to install only its skills. Repeat `--group` to combine groups:
 
@@ -36,11 +45,31 @@ batman sync --group dev-workflow --group ux --target codex
 batman status --group ux --target codex
 ```
 
-The direct installer also accepts `--group`. Without it, synchronization covers
-all stable skills, including ungrouped skills. Group selection leaves other
-installed skills untouched.
+Without `--group`, synchronization covers all stable skills, including
+ungrouped skills. Group selection leaves other installed skills untouched.
 
-`all` means Codex and Copilot, not portable. For `batman` commands, omitting `--target` uses the configured default profile, if set. Otherwise Batman selects the only detected agent or prompts when multiple agents are detected. Batman detects Codex and Copilot from their CLI commands or existing managed skill installs. In non-interactive use without a configured profile, pass `--target` when multiple agents are available. If it detects no agents, standard commands default to `all` and experimental commands default to Codex. The direct `scripts/install.sh` command keeps its default of installing both.
+Batman uses your saved default agent if you have one. Otherwise, it uses the
+only agent it finds. If it finds both Codex and Copilot, it asks which to use
+and offers to save that choice as your default. In scripts, choose an agent
+explicitly with `--target` or save a default first.
+
+Detection checks for a `codex` or `copilot` terminal command or Batman-managed
+skill copies in that agent's folder. It is an inference: editor integrations
+may be missed, and old skill copies can remain after an agent is removed.
+Portable copies alone do not count as Codex installations.
+
+If neither agent is found, ordinary skill commands use portable mode and show
+the destination, `~/.agents/skills` by default. This gives you manual-only skill
+files without requiring an agent. Experimental commands require a Codex or
+Copilot choice. Pass `--target` to choose explicitly:
+
+```sh
+batman sync --target codex
+batman sync --target copilot
+batman sync --target portable
+```
+
+`--target all` selects Codex and Copilot together.
 
 Set a default profile to skip the prompt on future commands:
 
@@ -61,6 +90,20 @@ When a default profile is set, specify `--target copilot` (or another supported 
 Override these paths with `BATMAN_CODEX_SKILLS_DIR`, `BATMAN_COPILOT_SKILLS_DIR`, and `BATMAN_PORTABLE_SKILLS_DIR`. Set `BATMAN_BIN_DIR` to change the command location.
 
 The scripts require a POSIX shell and either `sha256sum` or `shasum`.
+
+### Migrating old installer commands
+
+`./scripts/install.sh` now sets up only the command and takes no installation
+options. Replace earlier usage as follows:
+
+| Earlier command | Current commands |
+| --- | --- |
+| `./scripts/install.sh --install-command` | `./scripts/install.sh`, then `batman sync --target all` if you also want skills for both agents |
+| `./scripts/install.sh` to install all skills | `batman sync --target all` |
+| `./scripts/install.sh --target codex --group ux` | `batman sync --target codex --group ux` |
+
+Setup refuses to replace an existing unrelated command. Running it again for
+the same checkout leaves the command link in place.
 
 ## Commands
 
@@ -176,6 +219,9 @@ the snapshot while preserving the personal skill. The maintenance skill lives
 under `.agents/skills/` and is manual-only; Batman does not install it globally.
 
 ## Checks
+
+See the [ordered backlog](./docs/backlog.md) for planned usability improvements
+and their GitHub tickets.
 
 ```sh
 ./scripts/check-skills.sh

@@ -67,7 +67,32 @@ The user-facing entry point is `./scripts/batman`. The installer can also place 
 
 `all` explicitly selects Codex and Copilot. `config set default-profile codex|copilot` chooses the target Batman uses when `--target` is omitted; the profile is stored at `$XDG_CONFIG_HOME/batman/default-profile` or `~/.config/batman/default-profile`. Use `config get default-profile` to display it and `config unset default-profile` to clear it. With a default profile set, Batman never prompts: pass `--target` to use another target for one command.
 
-Without a configured profile, Batman selects the only detected agent or prompts when it detects multiple agents. Detection checks for the CLI command or an existing Batman-managed skill installation. In non-interactive use with multiple detected agents, pass `--target`. If no agents are detected, stable commands keep their `all` default and experimental commands keep their Codex default. The direct `scripts/install.sh` command is unchanged and keeps its default of installing both.
+Without a configured profile, Batman selects the only detected agent. When
+both are detected, it asks which to use and offers to save the choice as the
+default. Declining keeps the choice for that command only. In non-interactive
+use with both agents and no default, pass `--target`.
+
+Detection checks for the terminal command or Batman-managed skill copies in
+the agent's folder, including older symlinks. Portable copies do not establish
+that Codex is installed. Detection can miss editor integrations or find old
+copies after an agent is removed.
+
+If neither agent is detected, ordinary skill commands use portable mode and
+explain the destination. Experimental commands require an explicit Codex or
+Copilot target in that case. Read-only `groups`, `scan`, and help need no agent
+choice; `scan` does not use a saved default.
+
+Run `./scripts/install.sh` to set up only the command. It does not install skills
+or change agent configuration. Old installer target and group options belong
+on `batman sync`; old `--install-command` usage becomes `./scripts/install.sh`,
+followed by `batman sync --target all` only if both skill installations are wanted.
+The link points at this checkout, which must remain available. Existing unrelated
+commands are preserved, and setup explains how to add the command folder to PATH.
+
+Running `batman` without arguments succeeds with brief introductory help.
+Each command and config or experimental subcommand supports `--help`, including
+before a required skill name. Help performs no installation, source validation,
+agent selection, or configuration changes.
 
 ### Groups
 
@@ -192,8 +217,7 @@ Use `--group <name>` to synchronize only that group. Repeat the option to combin
 groups. Duplicate selections have no additional effect. Without group selection,
 sync covers all stable skills, including ungrouped skills. It does not remove
 installed skills outside the selection or store a default group selection.
-Unknown groups fail before any installation changes. `scripts/install.sh` accepts
-the same group options.
+Unknown groups fail before any installation changes.
 
 When syncing all targets, identical outcomes are grouped onto one row per skill with the targets listed together. Different outcomes remain on separate target-specific rows. The summary counts operations per target.
 

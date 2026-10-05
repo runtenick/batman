@@ -5,6 +5,7 @@ set -eu
 script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 repo_dir=$(CDPATH= cd -- "$script_dir/.." && pwd)
 batman_script="$repo_dir/scripts/batman"
+sync_script="$repo_dir/scripts/sync-skills.sh"
 install_script="$repo_dir/scripts/install.sh"
 check_script="$repo_dir/scripts/check-skills.sh"
 
@@ -122,7 +123,7 @@ case $output in *implement*|*unslop*) fail 'group status included unrelated skil
 output=$(run_group_env "$batman_script" sync --target copilot --group dev-workflow --group=ux --group ux)
 assert_contains "$output" '2 installed, 0 updated, 9 unchanged'
 [ ! -e "$group_copilot_dir/unslop" ] || fail 'combined groups installed a communication skill'
-run_group_env "$install_script" --group ux --target codex >/dev/null
+run_group_env "$sync_script" --group ux --target codex >/dev/null
 [ -f "$group_codex_dir/ui-prototype/SKILL.md" ] || fail 'direct installer did not select UX'
 group_portable_dir="$test_root/group-portable"
 run_group_env env BATMAN_PORTABLE_SKILLS_DIR="$group_portable_dir" \
@@ -130,7 +131,7 @@ run_group_env env BATMAN_PORTABLE_SKILLS_DIR="$group_portable_dir" \
 assert_file_contains "$group_portable_dir/ui-prototype/SKILL.md" 'disable-model-invocation: true'
 [ ! -e "$group_portable_dir/implement" ] || fail 'portable group sync installed a workflow skill'
 
-for group_command in "$batman_script" "$install_script"; do
+for group_command in "$batman_script" "$sync_script"; do
     if [ "$group_command" = "$batman_script" ]; then
         set -- sync
     else
@@ -202,7 +203,7 @@ mv "$source_dir/groups.tsv" "$test_root/groups-withheld.tsv"
 output=$(run_env "$batman_script" groups)
 assert_contains "$output" 'dev-workflow       grill-me'
 run_group_env env BATMAN_PORTABLE_SKILLS_DIR="$group_portable_dir" \
-    "$install_script" --target portable >/dev/null
+    "$sync_script" --target portable >/dev/null
 [ -f "$group_portable_dir/writing-for-agents/SKILL.md" ] || fail 'manifest-free sync should install ungrouped skills'
 [ -f "$group_portable_dir/unslop/SKILL.md" ] || fail 'manifest-free sync should install communication skills'
 mv "$test_root/groups-withheld.tsv" "$source_dir/groups.tsv"
@@ -381,7 +382,7 @@ run_env "$batman_script" disable to-spec --target copilot >/dev/null
 assert_file_contains "$copilot_dir/to-spec/SKILL.md" 'disable-model-invocation: true'
 
 printf '%s\n' 'Testing command installation and symlink invocation...'
-run_env env BATMAN_BIN_DIR="$bin_dir" "$install_script" --target codex --install-command >/dev/null
+run_env env BATMAN_BIN_DIR="$bin_dir" "$install_script" >/dev/null
 [ "$(readlink "$bin_dir/batman")" = "$repo_dir/scripts/batman" ] || fail 'command symlink target'
 output=$(env \
     BATMAN_SOURCE_DIR="$source_dir" \
@@ -389,6 +390,7 @@ output=$(env \
     "$bin_dir/batman" status --target codex 2>&1)
 assert_contains "$output" 'Skill              Target           Invocation'
 
+sh "$script_dir/test-batman-entry.sh"
 sh "$script_dir/test-batman-scan.sh"
 
 printf '%s\n' 'All Batman regression tests passed.'
