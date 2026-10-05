@@ -34,6 +34,9 @@ Their `SOURCE.md` files explain the relationship to the custom skills.
 
 Batman keeps every stable skill manual-only and lets the installer derive target-specific invocation metadata. It replaces host-specific skill calls with sibling file references where the workflow requires another included skill. The implementation skill does not commit without explicit permission, and code review keeps delegation under user control.
 
+Batman adopts v1.3's `GLOSSARY.md` and `GLOSSARY-MAP.md` filenames in the active
+domain-modeling and TDD skills, including the `GLOSSARY-FORMAT.md` template.
+
 Tracker setup references were adapted so the stable skills can use local files or an already configured tracker without requiring Matt's setup skill. Other shared instructions and supporting files remain close to the source. Batman changes only installed projections of the experimental prototype by adding target-specific manual-only invocation metadata. It does not change the vendored source.
 
 MIT License
