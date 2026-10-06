@@ -170,7 +170,8 @@ run_scan() {
     scan_add_global_root "$HOME/.agents/skills" 'Codex, Copilot'
     scan_add_global_root "$HOME/.copilot/skills" Copilot
     scan_add_global_root /etc/codex/skills Codex
-    # Honor Batman destinations without treating the shared default as Codex-only.
+    # Include the shared destination and legacy folders for duplicate discovery.
+    scan_add_global_root "$shared_destination_dir" 'Codex, Copilot'
     scan_add_global_root "$codex_destination_dir" Codex
     scan_add_global_root "$copilot_destination_dir" Copilot
 

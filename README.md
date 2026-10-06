@@ -23,136 +23,106 @@ Setup installs only the command. It links `batman` into `~/.local/bin` and
 shows how to add that directory to `PATH` if needed. Keep the checkout: the
 command uses its current code and bundled skills.
 
-Browse the skills, install a group, and check the result:
+Browse the skills, install them, and check the result:
 
 ```sh
 batman groups
-batman sync --group dev-workflow
+batman sync
 batman status
 ```
 
-`sync` installs missing skills and refreshes clean managed copies. Omit
-`--group` to synchronize all stable skills. Skills under evaluation are added
-separately. Use `batman <command> --help` for instructions and examples,
-including `batman enable --help` before choosing a skill.
+Batman installs one shared copy of each skill in `~/.agents/skills`. Codex and
+Copilot both load skills from that folder. No agent selection or saved default
+profile is needed. Set `BATMAN_SKILLS_DIR` to use a different destination.
+Setup links the command to this checkout, so local repository changes are
+available immediately; synchronization updates the installed skill copies.
+Batman does not fetch repository or upstream updates.
 
-Choose a group to install only its skills. Repeat `--group` to combine groups:
+`sync` installs missing stable skills and refreshes clean managed copies. It
+preserves local edits and invocation preferences. Skills under evaluation are
+added separately.
+
+To install selected groups, repeat `--group` as needed:
 
 ```sh
-batman groups
-batman sync --group dev-workflow --target codex
-batman sync --group dev-workflow --group communication --target codex
-batman status --group communication --target codex
+batman sync --group dev-workflow
+batman sync --group dev-workflow --group communication
+batman status --group communication
 ```
 
 Without `--group`, synchronization covers all stable skills, including
 ungrouped skills. Group selection leaves other installed skills untouched.
 
-Batman uses your saved default agent if you have one. Otherwise, it uses the
-only agent it finds. If it finds both Codex and Copilot, it asks which to use
-and offers to save that choice as your default. In scripts, choose an agent
-explicitly with `--target` or save a default first.
-
-Detection checks for a `codex` or `copilot` terminal command or Batman-managed
-skill copies in that agent's folder. It is an inference: editor integrations
-may be missed, and old skill copies can remain after an agent is removed.
-Portable copies alone do not count as Codex installations.
-
-If neither agent is found, ordinary skill commands use portable mode and show
-the destination, `~/.agents/skills` by default. This gives you skill files with
-their source invocation defaults without requiring an agent. Experimental commands require a Codex or
-Copilot choice. Pass `--target` to choose explicitly:
-
-```sh
-batman sync --target codex
-batman sync --target copilot
-batman sync --target portable
-```
-
-`--target all` selects Codex and Copilot together.
-
-Set a default profile to skip the prompt on future commands:
-
-```sh
-batman config set default-profile codex
-batman config get default-profile
-batman config unset default-profile
-```
-
-When a default profile is set, specify `--target copilot` (or another supported target) to use a different target for one command. Batman stores the profile in `$XDG_CONFIG_HOME/batman/default-profile`, or `~/.config/batman/default-profile` when `XDG_CONFIG_HOME` is unset.
-
-| Target | Default destination |
-| --- | --- |
-| `codex` | `~/.agents/skills` |
-| `copilot` | `~/.copilot/skills` |
-| `portable` | `~/.agents/skills` |
-
-Override these paths with `BATMAN_CODEX_SKILLS_DIR`, `BATMAN_COPILOT_SKILLS_DIR`, and `BATMAN_PORTABLE_SKILLS_DIR`. Set `BATMAN_BIN_DIR` to change the command location.
-
-The scripts require a POSIX shell and either `sha256sum` or `shasum`.
-
-### Migrating old installer commands
-
-`./scripts/install.sh` now sets up only the command and takes no installation
-options. Replace earlier usage as follows:
-
-| Earlier command | Current commands |
-| --- | --- |
-| `./scripts/install.sh --install-command` | `./scripts/install.sh`, then `batman sync --target all` if you also want skills for both agents |
-| `./scripts/install.sh` to install all skills | `batman sync --target all` |
-| `./scripts/install.sh --target codex --group communication` | `batman sync --target codex --group communication` |
-
-Setup refuses to replace an existing unrelated command. Running it again for
-the same checkout leaves the command link in place.
+Set `BATMAN_BIN_DIR` to change the command location. The scripts require a
+POSIX shell and either `sha256sum` or `shasum`.
 
 ## Commands
 
 ```text
 batman groups
 batman scan [<dir>] [--include-unknown]
-batman sync [--target codex|copilot|portable|all] [--group <name>]...
-batman status [--target codex|copilot|portable|all] [--group <name>]...
-batman enable <skill> [--target codex|copilot|portable|all]
-batman disable <skill> [--target codex|copilot|portable|all]
-batman update <skill> [--target codex|copilot|portable|all]
-batman experimental list [--target codex|copilot|all]
-batman experimental add <skill> [--target codex|copilot|all]
-batman experimental remove <skill> [--target codex|copilot|all]
-batman config get default-profile
-batman config set default-profile <codex|copilot>
-batman config unset default-profile
+batman sync [--group <name>]...
+batman status [--group <name>]...
+batman enable <skill>
+batman disable <skill>
+batman update <skill>
+batman experimental list
+batman experimental add <skill>
+batman experimental remove <skill>
 ```
 
-`status` reports installation, local changes, invocation mode, and available source updates. `enable` allows automatic invocation for one installed target. `disable` returns it to manual-only. `update` refreshes one skill and asks before replacing local changes.
+Use `batman <command> --help` for instructions and examples.
 
-`scan` inventories local skills, including skills Batman did not install. It
-shows a loading spinner in a terminal, clearing it before displaying the report.
-Redirected output does not include the spinner. The scan
-checks known global locations and searches the current Git project, or the
-current directory outside a Git project. Pass a directory to search beneath it
-instead, for example `batman scan ~/projects`.
+`status` reports installation, local changes, invocation mode, and updates
+available from this checkout. `enable` allows automatic invocation in both
+agents. `disable` returns a skill to manual-only use. `update` refreshes one
+skill and asks before replacing local changes.
 
-The report shows each skill's name, inferred scope (`Global` or `Project`), and
-absolute installation path. When locations match both Codex and Copilot
-conventions, it also shows a `Convention` column. Multiple installations of the
-same skill remain separate rows. Scope comes from installation conventions,
-not from detecting agent executables or observing a session.
+`scan` inventories local skills, including skills Batman did not install.
+It checks known global locations and searches the current Git project, or the
+current directory outside a Git project. Pass a directory to search beneath it,
+for example `batman scan ~/projects`. The report shows each skill's name,
+inferred scope, and absolute installation path. Multiple installations remain
+separate rows so legacy duplicates are visible. Other `SKILL.md` files are
+counted at the end; `--include-unknown` shows their paths. See
+[scan conventions and limits](./docs/skill-management.md#scan).
 
-Other `SKILL.md` files, such as source copies or downloaded examples, are counted
-at the end. Use `batman scan --include-unknown` to show their paths with scope
-`Unknown`. Scanning does not change skills or configuration, and does not use
-the configured default profile. See [scan conventions and limits](./docs/skill-management.md#scan)
-for the recognized locations.
+`sync` reports a conflict when both the source and installed copy changed.
+It also migrates older Batman copies into the shared installation. Previous
+copies are archived outside the skill search folders before conversion or
+removal. If legacy copies differ in content or invocation preference, Batman
+reports both paths and preserves both copies. See
+[migration details](./docs/skill-management.md#migration).
 
-`sync` installs missing skills and updates clean managed copies. It preserves locally modified copies and reports a conflict when both the source and installed copy changed. It also migrates symlinks created by older Batman versions when they point to this checkout.
+`experimental list` shows skills under evaluation. `experimental add` installs
+or refreshes one. `experimental remove` removes a managed copy and asks first
+if it has local changes. Ordinary `sync` excludes new experiments, but migrates
+already installed experimental copies.
 
-`experimental list` shows skills the owner has not fully validated or committed to the stable set. `experimental add` installs one for Codex, Copilot, or both. `experimental remove` removes a managed copy and asks first if it has local changes. Ordinary `sync` excludes this folder.
+Borrowed stable directories remain byte-for-byte identical to upstream.
+`skills/sources.tsv` records their provenance and content hashes.
+Batman-specific behavior belongs in tooling or separate owned skills.
+Installed copies carry both `disable-model-invocation` in `SKILL.md` and
+`policy.allow_implicit_invocation` in `agents/openai.yaml`, expressing the same
+local preference for Copilot and Codex. Canonical source files stay unchanged.
 
-Borrowed stable directories remain byte-for-byte identical to upstream. `skills/sources.tsv` records their provenance and content hashes. Batman-specific behavior belongs in tooling or separate owned skills. To customize a third-party skill, rename it and treat it as your own.
+### Older commands and installations
 
-Prefer manual invocation for top-level workflows. Automatic invocation fits behavior that should generally apply and dependencies other skills invoke. Borrowed skills preserve upstream defaults. Installed local preferences take precedence. Copilot and portable projections use `disable-model-invocation`; Codex projections use `policy.allow_implicit_invocation` in `agents/openai.yaml`.
+Old `--target codex|copilot|portable|all` options remain deprecated aliases.
+They all use the shared installation and never create a second set of skills.
+Saved `default-profile` settings are ignored. Clear one with
+`batman config unset default-profile`; setting a new profile is no longer supported.
 
-See [docs/skill-management.md](./docs/skill-management.md) for the state and update model.
+The old `BATMAN_CODEX_SKILLS_DIR` and `BATMAN_PORTABLE_SKILLS_DIR` variables
+remain destination fallbacks. Prefer `BATMAN_SKILLS_DIR`.
+`BATMAN_COPILOT_SKILLS_DIR` identifies a legacy folder to migrate and scan.
+When using a custom shared destination, Batman migrates only legacy locations
+you explicitly configure; it leaves ordinary home installations alone.
+
+`./scripts/install.sh` sets up only the command. Replace old installer skill
+options with `batman sync`, optionally adding `--group`. Running setup again
+for the same checkout leaves its command link in place. Setup refuses to
+replace an unrelated command.
 
 ## Skills
 
@@ -200,7 +170,7 @@ implementation, and review. It includes the skills those stages depend on.
 
 ## Experimental skills
 
-- `prototype` is an unmodified copy of Matt Pocock's skill for building throwaway logic or UI experiments. Install it with `batman experimental add prototype --target codex`, `--target copilot`, or `--target all`.
+- `prototype` is an unmodified copy of Matt Pocock's skill for building throwaway logic or UI experiments. Install it with `batman experimental add prototype`.
 
 See [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md) for sources and licenses.
 

@@ -15,7 +15,7 @@ Make the batman command available. No skills are installed.
 Then run batman to see what you can do.
 
 Older installer options have moved to batman sync:
-  ./scripts/install.sh --target codex  ->  batman sync --target codex
+  ./scripts/install.sh --target codex  ->  batman sync
   ./scripts/install.sh --install-command  ->  ./scripts/install.sh
 HELP
 }

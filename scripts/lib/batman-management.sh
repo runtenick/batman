@@ -10,6 +10,7 @@ experimental_source_dir="$source_dir/experimental"
 codex_destination_dir=${BATMAN_CODEX_SKILLS_DIR:-${BATMAN_SKILLS_DIR:-"$HOME/.agents/skills"}}
 copilot_destination_dir=${BATMAN_COPILOT_SKILLS_DIR:-"$HOME/.copilot/skills"}
 portable_destination_dir=${BATMAN_PORTABLE_SKILLS_DIR:-${BATMAN_SKILLS_DIR:-"$HOME/.agents/skills"}}
+shared_destination_dir=${BATMAN_SKILLS_DIR:-${BATMAN_CODEX_SKILLS_DIR:-${BATMAN_PORTABLE_SKILLS_DIR:-"$HOME/.agents/skills"}}}
 
 hash_stdin() {
     if command -v sha256sum >/dev/null 2>&1; then
@@ -140,7 +141,7 @@ existing_invocation() {
     projection_kind=$1
     skill_dir=$2
 
-    if [ "$projection_kind" = codex ]; then
+    if [ "$projection_kind" = codex ] || [ "$projection_kind" = shared ]; then
         if [ -f "$skill_dir/agents/openai.yaml" ]; then
             policy=$(codex_invocation_policy "$skill_dir/agents/openai.yaml")
             if [ "$policy" = true ]; then
@@ -244,14 +245,15 @@ write_invocation() {
     skill_dir=$2
     invocation=$3
 
-    if [ "$projection_kind" = codex ]; then
+    if [ "$projection_kind" = codex ] || [ "$projection_kind" = shared ]; then
         mkdir -p "$skill_dir/agents"
         if [ "$invocation" = automatic ]; then
             write_codex_invocation "$skill_dir/agents/openai.yaml" true
         else
             write_codex_invocation "$skill_dir/agents/openai.yaml" false
         fi
-    else
+    fi
+    if [ "$projection_kind" != codex ]; then
         write_portable_invocation "$skill_dir/SKILL.md" "$invocation"
     fi
 }
@@ -288,7 +290,7 @@ render_update_projection() {
         cp -R "$skill_entry" "$projection_dir"/
     done
 
-    if [ "$projection_kind" = codex ]; then
+    if [ "$projection_kind" = codex ] || [ "$projection_kind" = shared ]; then
         render_codex_skill "$skill_source/SKILL.md" "$projection_dir/SKILL.md.tmp"
         mv "$projection_dir/SKILL.md.tmp" "$projection_dir/SKILL.md"
         if [ ! -f "$projection_dir/agents/openai.yaml" ]; then
@@ -298,7 +300,7 @@ render_update_projection() {
                 cp "$metadata_source" "$projection_dir/agents/openai.yaml"
             fi
         fi
-        write_invocation codex "$projection_dir" "$invocation"
+        write_invocation "$projection_kind" "$projection_dir" "$invocation"
     else
         write_portable_invocation "$projection_dir/SKILL.md" "$invocation"
     fi
@@ -354,7 +356,7 @@ update_skill_on_target() {
         return 1
     fi
 
-    invocation=$(existing_invocation "$projection_kind" "$destination")
+    invocation=$(state_get "$state_file" invocation "$skill_name" 2>/dev/null || existing_invocation "$projection_kind" "$destination")
     source_hash=$(managed_hash "$skill_source")
     current_hash=$(managed_hash "$destination")
     previous_source_hash=$(state_get "$state_file" source-hash "$skill_name" 2>/dev/null || true)
@@ -393,32 +395,22 @@ target_destination() {
     case $1 in
         codex) printf '%s\n' "$codex_destination_dir" ;;
         copilot) printf '%s\n' "$copilot_destination_dir" ;;
+        shared) printf '%s\n' "$shared_destination_dir" ;;
         portable) printf '%s\n' "$portable_destination_dir" ;;
     esac
 }
 
 target_projection_kind() {
-    if [ "$1" = codex ]; then
-        printf '%s\n' codex
-    else
-        printf '%s\n' portable
-    fi
+    printf '%s\n' shared
 }
 
 target_list() {
-    case $1 in
-        codex|copilot|portable)
-            printf '%s\n' "$1"
-            ;;
-        all)
-            printf '%s\n' codex copilot
-            ;;
-    esac
+    printf '%s\n' shared
 }
 
 validate_target() {
     case $1 in
-        codex|copilot|portable|all) return 0 ;;
+        shared|codex|copilot|portable|all) return 0 ;;
         *)
             printf 'batman: invalid target: %s\n' "$1" >&2
             return 1
@@ -512,7 +504,8 @@ experimental_skill_state() {
 
 list_experimental_skills() {
     requested_target=$1
-    printf '%-18s %-16s %-12s %-12s %s\n' Skill Target Invocation 'Local state' Update
+    printf 'Skills directory: %s\n' "$shared_destination_dir"
+    printf '%-18s %-12s %-12s %s\n' Skill Invocation 'Local state' Update
 
     [ -d "$experimental_source_dir" ] || return 0
     for target_name in $(target_list "$requested_target"); do
@@ -522,8 +515,8 @@ list_experimental_skills() {
 
             skill_name=${skill_dir##*/}
             experimental_skill_state "$skill_name" "$target_name"
-            printf '%-18s %-16s %-12s %-12s %s\n' \
-                "$skill_name" "$target_name" "$experimental_invocation" "$experimental_local_state" "$experimental_update_state"
+            printf '%-18s %-12s %-12s %s\n' \
+                "$skill_name" "$experimental_invocation" "$experimental_local_state" "$experimental_update_state"
         done
     done
 }
@@ -693,7 +686,7 @@ status_target() {
             fi
         fi
 
-        printf '%-18s %-16s %-12s %-12s %s\n' "$skill_name" "$target_name" "$invocation" "$local_state" "$update_state"
+        printf '%-18s %-12s %-12s %s\n' "$skill_name" "$invocation" "$local_state" "$update_state"
     done
 }
 

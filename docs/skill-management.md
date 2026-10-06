@@ -1,138 +1,91 @@
 # Skill management
 
-This document defines the local state and command contract for installing and managing Batman skills. It does not change the installer by itself.
+Batman manages one shared installation for Codex and Copilot at
+`~/.agents/skills`. `BATMAN_SKILLS_DIR` overrides the destination. Commands
+operate without agent detection or a saved profile.
 
-## State model
+## State and invocation
 
-Batman keeps state separately for each installation target. The state file lives at:
-
-```text
-<skills-directory>/.batman/state.tsv
-```
-
-The target-specific files are independent. A skill can be automatic in Codex and manual in Copilot.
-
-The file uses tab-separated records so it remains inspectable without requiring a JSON or YAML parser:
+The shared state file is `<skills-directory>/.batman/state.tsv`:
 
 ```text
 # batman-state-v1
 # record<TAB>skill<TAB>value
-invocation	unslop	automatic
-source-hash	unslop	<hash of the canonical Batman skill>
-installed-hash	unslop	<hash of the last rendered installed skill>
+invocation\tunslop\tautomatic
+source-hash\tunslop\t<hash of the canonical Batman skill>
+installed-hash\tunslop\t<hash of the last rendered installed skill>
 ```
 
-The records mean:
+`invocation` records one manual or automatic preference per skill. Fresh
+installations inherit their source defaults; existing local choices take
+precedence. `source-hash` identifies the canonical content last synchronized.
+`installed-hash` identifies the last installed content, excluding generated
+invocation settings.
 
-- `invocation` is either `manual` or `automatic`. Fresh installations without a record use the canonical skill's source default, or `manual` without a source. Existing installations import their current setting.
-- `source-hash` identifies the canonical skill content used for the last synchronization.
-- `installed-hash` identifies the last installed content, excluding generated invocation metadata.
+Installed copies express the same preference in two formats:
 
-Borrowed stable skill directories are the canonical upstream copies. They have
-no duplicate snapshots. `skills/sources.tsv` records skill name, repository,
-upstream path, tracked ref, commit, and a SHA-256 directory hash. The checker
-validates canonical bytes against that hash, including supporting files and
-agent metadata. The hash is SHA-256 of sorted `./path<TAB>file-sha256` lines,
-with a newline after each line, using C locale ordering.
+- Copilot reads `disable-model-invocation` in `SKILL.md`.
+- Codex reads `policy.allow_implicit_invocation` in `agents/openai.yaml`.
 
-Upstream maintenance compares directly with these directories. Refreshes update
-the canonical files and manifest together; installed projections then receive
-the change through synchronization. Git history preserves previous revisions.
-Batman Codex UI metadata lives in `scripts/codex-metadata/<skill>.yaml` and
-is added only to Codex projections when upstream supplies none. Changes to
-these files participate in installation update detection.
-Batman-specific changes belong outside borrowed directories. Rename a customized
-third-party skill and treat it as a separate owned skill.
+`enable` and `disable` update both formats and the saved preference. They do
+not edit canonical source files. Borrowed source directories remain identical
+to upstream, including metadata and supporting files. `skills/sources.tsv`
+records repository, path, ref, commit, and content hash. The checker validates
+those canonical bytes. Git history preserves previous revisions.
 
-Prefer manual invocation for top-level workflows and automatic invocation for
-behavior that generally applies or dependencies invoked by other skills.
-The invocation preference is local state. Stable skills inherit their source's default invocability; skills without a source are manual by default. The canonical `SKILL.md` preserves the source's invocation field, including omission for model-invoked skills. Fresh installations use this default. Existing local settings take precedence and must not be written back into the repository.
+The source directory hash is SHA-256 of sorted `./path<TAB>file-sha256` lines,
+with a newline after each line, using C locale ordering. Installation hashes
+exclude the ownership marker and normalize generated invocation settings.
+Batman adds `scripts/codex-metadata/<skill>.yaml` only when upstream supplies no
+metadata. These external files participate in source update detection.
 
-Experimental skills use each target's state file after the owner adds them. Their source path points into `skills/experimental/`, and their installed projections start with the source invocation default and preserve existing local settings.
+The hashes distinguish safe updates, local modifications, and conflicts.
+Ordinary synchronization preserves local modifications. Explicit `update`
+asks before replacing local edits or a copy with no recorded baseline.
 
-The hashes allow the manager to distinguish these cases:
-
-- The installed skill matches `installed-hash`, and Batman has a newer `source-hash`: safe update.
-- The installed skill differs from `installed-hash`, and Batman has not changed: local modification.
-- Both differ: update available with a local conflict.
-
-The manager must never replace a locally modified skill during an ordinary synchronization. An explicit update command may do so only after showing the conflict and requiring confirmation.
-
-## Command contract
-
-The user-facing entry point is `./scripts/batman`. The installer can also place a `batman` symlink in `~/.local/bin` (or `$BATMAN_BIN_DIR`) so the same entry point is available directly as `batman`.
+## Commands
 
 ```text
-./scripts/batman groups
-./scripts/batman scan [<dir>] [--include-unknown]
-./scripts/batman status [--target codex|copilot|portable|all] [--group <name>]...
-./scripts/batman enable <skill> [--target codex|copilot|portable|all]
-./scripts/batman disable <skill> [--target codex|copilot|portable|all]
-./scripts/batman sync [--target codex|copilot|portable|all] [--group <name>]...
-./scripts/batman update <skill> [--target codex|copilot|portable|all]
-./scripts/batman experimental list [--target codex|copilot|all]
-./scripts/batman experimental add <skill> [--target codex|copilot|all]
-./scripts/batman experimental remove <skill> [--target codex|copilot|all]
-./scripts/batman config get default-profile
-./scripts/batman config set default-profile <codex|copilot>
-./scripts/batman config unset default-profile
+batman groups
+batman scan [<dir>] [--include-unknown]
+batman status [--group <name>]...
+batman sync [--group <name>]...
+batman enable <skill>
+batman disable <skill>
+batman update <skill>
+batman experimental list
+batman experimental add <skill>
+batman experimental remove <skill>
 ```
 
-`all` explicitly selects Codex and Copilot. `config set default-profile codex|copilot` chooses the target Batman uses when `--target` is omitted; the profile is stored at `$XDG_CONFIG_HOME/batman/default-profile` or `~/.config/batman/default-profile`. Use `config get default-profile` to display it and `config unset default-profile` to clear it. With a default profile set, Batman never prompts: pass `--target` to use another target for one command.
+Run `./scripts/install.sh` to link the command into `~/.local/bin`, or
+`$BATMAN_BIN_DIR`. It installs no skills. The link uses this checkout's code
+and sources. `sync` copies local sources; it does not fetch upstream updates.
 
-Without a configured profile, Batman selects the only detected agent. When
-both are detected, it asks which to use and offers to save the choice as the
-default. Declining keeps the choice for that command only. In non-interactive
-use with both agents and no default, pass `--target`.
-
-Detection checks for the terminal command or Batman-managed skill copies in
-the agent's folder, including older symlinks. Portable copies do not establish
-that Codex is installed. Detection can miss editor integrations or find old
-copies after an agent is removed.
-
-If neither agent is detected, ordinary skill commands use portable mode and
-explain the destination. Experimental commands require an explicit Codex or
-Copilot target in that case. Read-only `groups`, `scan`, and help need no agent
-choice; `scan` does not use a saved default.
-
-Run `./scripts/install.sh` to set up only the command. It does not install skills
-or change agent configuration. Old installer target and group options belong
-on `batman sync`; old `--install-command` usage becomes `./scripts/install.sh`,
-followed by `batman sync --target all` only if both skill installations are wanted.
-The link points at this checkout, which must remain available. Existing unrelated
-commands are preserved, and setup explains how to add the command folder to PATH.
-
-Running `batman` without arguments succeeds with brief introductory help.
-Each command and config or experimental subcommand supports `--help`, including
-before a required skill name. Help performs no installation, source validation,
-agent selection, or configuration changes.
+Help is read-only and runs before source validation or installation state is
+loaded. Running `batman` without arguments prints brief introductory help.
 
 ### Groups
 
-`groups` lists stable skills and their group, including skills with no group.
-It does not require a target. `skills/groups.tsv` records membership and direct
-dependencies using three tab-separated fields:
+`groups` lists stable skills and their group, including ungrouped skills.
+`skills/groups.tsv` records membership and direct dependencies:
 
 ```text
 # skill<TAB>group<TAB>dependencies
-grill-me	dev-workflow	grilling
-grill-with-docs	dev-workflow	grilling,domain-modeling
-grilling	dev-workflow	-
+grill-me\tdev-workflow\tgrilling
+grill-with-docs\tdev-workflow\tgrilling,domain-modeling
+grilling\tdev-workflow\t-
 ```
 
-Use `-` when a skill has no dependencies. Grouped skills live at
-`skills/<group>/<name>`. Ungrouped skills live at `skills/<name>` and have no
-manifest entry. Record dependencies when adding or changing skills. The checker
-validates declared dependencies; it does not infer them from skill prose.
-It rejects malformed rows, duplicate names or membership, unknown skills,
-membership that differs from the directory layout, and dependencies outside the
-skill's group. Checking every direct dependency keeps transitive
-dependencies together too.
+Grouped sources live at `skills/<group>/<name>`. Ungrouped sources live at
+`skills/<name>`. Installed directories remain flat. Each skill belongs to at
+most one group; dependencies belong to that same group. The checker rejects
+malformed rows, duplicate names, missing skills, layout mismatches, and
+cross-group dependencies. Discovery excludes `skills/experimental/`.
 
-The groups are `dev-workflow` and `communication`. Installed directories
-remain flat at `<skills-directory>/<name>`. Skills in the same group remain siblings in both
-layouts. Stable discovery excludes the experimental folder.
-Experiments have separate installation commands.
+Repeat `--group` to select multiple groups for sync or status. Omitting it
+selects every stable skill. Unknown groups fail before installation changes.
+Selection does not remove other installed skills or save a default group.
 
 ### `scan`
 
@@ -154,9 +107,9 @@ Recognized conventions are:
 | `<project-or-subdirectory>/.github/skills/<skill>/SKILL.md` | Project | Copilot |
 | `<project-or-subdirectory>/.claude/skills/<skill>/SKILL.md` | Project | Copilot |
 
-The scan also checks Batman's configured Codex and Copilot destinations, using
-`BATMAN_CODEX_SKILLS_DIR`, `BATMAN_SKILLS_DIR`, and
-`BATMAN_COPILOT_SKILLS_DIR`. These are additional global locations; standard
+The scan also checks Batman's shared destination and configured legacy folders,
+using `BATMAN_SKILLS_DIR`, `BATMAN_CODEX_SKILLS_DIR`,
+`BATMAN_PORTABLE_SKILLS_DIR`, and `BATMAN_COPILOT_SKILLS_DIR`. These are additional global locations; standard
 locations are still checked. The conventions follow the official
 [Codex skill locations](https://learn.chatgpt.com/docs/build-skills#where-codex-loads-local-skills)
 and [Copilot CLI skill locations](https://docs.github.com/en/copilot/reference/copilot-cli-reference/cli-command-reference#skill-locations).
@@ -193,77 +146,75 @@ It does not establish whether an agent actually discovered or loaded a skill.
 
 ### `status`
 
-`status` is read-only. It reports one row per installed or available skill and includes:
-
-- the target;
-- the invocation mode, `manual` or `automatic`;
-- the local content state, such as `missing`, `clean`, `modified`, or `conflict`;
-- whether a Batman update is available.
-
-Example:
-
-```text
-Skill      Target   Invocation   Local state   Update
-unslop     codex    automatic     clean         current
-to-spec    codex    manual        clean         available
-grill-me   codex    manual        modified      available
-```
-
-Use `--group <name>` to limit rows to one group. Repeat the option to show
-multiple groups. Without it, status covers every stable skill.
-
-### `enable` and `disable`
-
-These commands change only the selected target's local invocation preference. They do not modify Batman's canonical source files.
-
-- `enable` sets `automatic`.
-- `disable` sets `manual`.
-- A missing preference is treated as `manual`.
-
-The command also regenerates the target's invocation metadata so the active harness sees the new setting.
+Status is read-only. It prints the shared destination and one row per stable
+skill with invocation mode, local state, and whether a checkout update is
+available. Local states include `missing`, `clean`, `modified`, `untracked`,
+and `conflict`. Use `scan` to find copies in legacy or unmanaged locations.
 
 ### `sync`
 
-`sync` adds missing skills and updates installed skills that have not been locally modified. It preserves local invocation preferences, reports local modifications, and does not overwrite conflicts.
+Sync adds missing stable skills and refreshes clean managed copies. It
+preserves local edits and invocation preferences, reports conflicts, and
+returns nonzero when any conflict remains. The summary counts skills once.
+It writes both agents' invocation metadata, including for preserved copies.
 
-Use `--group <name>` to synchronize only that group. Repeat the option to combine
-groups. Duplicate selections have no additional effect. Without group selection,
-sync covers all stable skills, including ungrouped skills. It does not remove
-installed skills outside the selection or store a default group selection.
-Unknown groups fail before any installation changes.
+### `update`, `enable`, and `disable`
 
-When syncing all targets, identical outcomes are grouped onto one row per skill with the targets listed together. Different outcomes remain on separate target-specific rows. The summary counts operations per target.
-
-### `update`
-
-`update <skill>` handles one skill explicitly. If the installed copy is clean, it updates it. If it has local changes, it shows the conflict before asking for permission to replace the copy.
+Update refreshes one installed stable skill from this checkout. It asks before
+replacing local changes or a copy with no baseline. Enable sets automatic
+invocation; disable sets manual invocation. These commands operate on the
+shared installation. Run sync first to migrate an older installation.
 
 ### `experimental`
 
-`skills/experimental/<name>` holds skills the owner has not fully validated or
-committed to the stable set. Experiments need no integrity manifest.
+Experiments live under `skills/experimental/<name>` and need no integrity
+manifest. List reports available experiments and their shared installation
+state. Add installs or refreshes one clean copy, preserving local preferences
+and edits. Remove deletes a managed copy and asks before removing local edits.
+Add and remove first migrate legacy copies of that experiment.
 
-`experimental list` reports experiments and their installation state.
-`experimental add <skill>` installs or refreshes one for Codex, Copilot, or both,
-using the same projections and local invocation preferences as stable skills.
-`experimental remove <skill>` removes the matching managed copy and asks before
-removing local changes. Without `--target`, these commands use the saved profile
-or agent detection described above. Ordinary stable commands exclude this folder.
-Moving an experiment into the stable set is an explicit repository change.
+Ordinary sync migrates already installed experiments when no groups are
+selected, but does not install new experiments or refresh their content. Use
+experimental add to refresh one. Promotion to stable remains an explicit
+repository change.
 
 ## Migration
 
-When a stable skill moves from `skills/<name>` to `skills/<group>/<name>`, Batman
-recognizes installed copies and legacy symlinks that reference the previous flat
-source path. Sync records the new path while preserving local edits, invocation
-preferences, and content baselines. Status and individual management commands also
-recognize the previous path before sync. Installed directory names do not change.
+Sync first converts existing managed copies to shared metadata. It then
+migrates managed copies from older destinations into the shared folder.
+Group selection limits migration to those stable skills; without groups,
+installed experiments and older managed skills are included too.
 
-The first state-aware run must import the existing installation before changing it:
+Before conversion or removal, Batman copies the original files, their state
+records, and their installation path into a unique directory under
+`~/.agents/.batman-archive`. For custom destinations the default archive is
+`<skills-parent>/.batman-archive`. Set `BATMAN_ARCHIVE_DIR` to override it.
+Archives sit outside skill discovery folders and are never deleted by sync.
 
-1. Read the current invocation setting from the installed target.
-2. Record it as the local preference.
-3. Record the installed content hash as the baseline.
-4. Leave the installed skill unchanged unless the user explicitly requests an update.
+Migration preserves recorded invocation preferences and content baselines.
+A legacy copy with local edits moves with those edits intact and remains
+modified. Copies without historical baselines are compared with a pristine
+current projection, so differing content remains protected from automatic
+replacement. Previous flat source paths and managed skill symlinks remain
+recognized.
 
-This preserves existing choices such as making `unslop` automatic.
+If both locations have a copy, migration compares normalized content and
+invocation preferences. Matching copies collapse into one shared installation,
+with the old copy archived. Differing copies remain in place and produce a
+conflict with both paths. Migration conflicts stop source synchronization. Review the copies, preserve the desired content and
+preference, and move the unwanted copy outside skill discovery before syncing
+again. Unmanaged skills are never migrated or overwritten.
+
+Older removed skills retain their content during conversion; sync does not
+remove them. Scan can locate them even though status lists only stable sources.
+
+`--target codex|copilot|portable|all` remains accepted as a deprecated alias;
+every value selects the shared installation. Saved default profiles are
+ignored. `config get default-profile` explains the retirement, and
+`config unset default-profile` removes an old setting. New profiles are rejected.
+
+`BATMAN_CODEX_SKILLS_DIR` and `BATMAN_PORTABLE_SKILLS_DIR` remain destination
+fallbacks after `BATMAN_SKILLS_DIR`. `BATMAN_COPILOT_SKILLS_DIR` specifies a
+legacy location for migration and scanning. With a custom shared destination,
+only explicitly configured legacy locations are migrated. This keeps isolated
+installs and tests from changing ordinary home installations.

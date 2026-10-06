@@ -126,7 +126,11 @@ assert_absent not-the-name
 make_skill "$test_root/custom-codex/custom" custom
 output=$(env HOME="$single_home" BATMAN_CODEX_SKILLS_DIR="$test_root/custom-codex" \
     BATMAN_COPILOT_SKILLS_DIR="$single_home/.copilot/skills" "$batman_script" scan "$test_root/empty")
-assert_row custom Global Codex "$test_root/custom-codex/custom"
+assert_row custom Global 'Codex, Copilot' "$test_root/custom-codex/custom"
+assert_row fallback Global Copilot "$single_home/.copilot/skills/fallback"
+output=$(env HOME="$single_home" BATMAN_SKILLS_DIR="$test_root/custom-codex" \
+    BATMAN_CODEX_SKILLS_DIR="$test_root/missing" "$batman_script" scan "$test_root/empty")
+assert_row custom Global 'Codex, Copilot' "$test_root/custom-codex/custom"
 assert_row fallback Global Copilot "$single_home/.copilot/skills/fallback"
 output=$(env HOME="$test_root/empty" BATMAN_CODEX_SKILLS_DIR="$test_root/missing" \
     BATMAN_COPILOT_SKILLS_DIR="$test_root/missing" "$batman_script" scan "$test_root/empty")
