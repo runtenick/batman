@@ -171,6 +171,7 @@ implementation, and review. It includes the skills those stages depend on.
 ## Experimental skills
 
 - `prototype` is an unmodified copy of Matt Pocock's skill for building throwaway logic or UI experiments. Install it with `batman experimental add prototype`.
+- `retro` is an unmodified copy of Matt Pocock's skill for reviewing coding sessions and suggesting improvements to the agent's environment. Install it with `batman experimental add retro`. It uses `writing-for-agents`, included in the stable skills.
 
 See [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md) for sources and licenses.
 

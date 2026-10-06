@@ -16,6 +16,11 @@ preserves installed local overrides.
 [`959a8e9f1edc3adbe2f7e3054bb6fbefa6696260`](https://github.com/mattpocock/skills/commit/959a8e9f1edc3adbe2f7e3054bb6fbefa6696260).
 The experimental folder holds skills still under evaluation.
 
+`skills/experimental/retro` was copied unchanged from
+`skills/engineering/retro` on upstream `main` at commit
+[`4588b32ecab9ecc9fc8cc6b6c5e7d675b6004b0d`](https://github.com/mattpocock/skills/commit/4588b32ecab9ecc9fc8cc6b6c5e7d675b6004b0d)
+on October 6, 2026.
+
 MIT License
 
 Copyright (c) 2026 Matt Pocock
