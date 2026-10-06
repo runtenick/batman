@@ -32,7 +32,7 @@ batman status
 ```
 
 `sync` installs missing skills and refreshes clean managed copies. Omit
-`--group` to synchronize all stable skills. Experimental skills are added
+`--group` to synchronize all stable skills. Skills under evaluation are added
 separately. Use `batman <command> --help` for instructions and examples,
 including `batman enable --help` before choosing a skill.
 
@@ -146,9 +146,11 @@ for the recognized locations.
 
 `sync` installs missing skills and updates clean managed copies. It preserves locally modified copies and reports a conflict when both the source and installed copy changed. It also migrates symlinks created by older Batman versions when they point to this checkout.
 
-`experimental list` shows raw skills available for testing. `experimental add` installs one for Codex, Copilot, or both with its source invocation default. When `--target` is omitted, it follows the detected-agent behavior above. The command does not change the vendored files. `experimental remove` removes the managed copies and asks first if a copy has local changes. Ordinary `sync` ignores experimental skills.
+`experimental list` shows skills the owner has not fully validated or committed to the stable set. `experimental add` installs one for Codex, Copilot, or both. `experimental remove` removes a managed copy and asks first if it has local changes. Ordinary `sync` excludes this folder.
 
-Stable skills inherit their source's default invocability. Skills without a source are manual by default. Matt-derived skills and supporting files match upstream exactly and keep his manual or model-invoked defaults. Fresh installations use these defaults; synchronization preserves existing local invocation settings. Copilot and portable copies use `disable-model-invocation` for their local invocation mode. Codex copies remove the unsupported field and store the local mode as `policy.allow_implicit_invocation` in `agents/openai.yaml`.
+Borrowed stable directories remain byte-for-byte identical to upstream. `skills/sources.tsv` records their provenance and content hashes. Batman-specific behavior belongs in tooling or separate owned skills. To customize a third-party skill, rename it and treat it as your own.
+
+Prefer manual invocation for top-level workflows. Automatic invocation fits behavior that should generally apply and dependencies other skills invoke. Borrowed skills preserve upstream defaults. Installed local preferences take precedence. Copilot and portable projections use `disable-model-invocation`; Codex projections use `policy.allow_implicit_invocation` in `agents/openai.yaml`.
 
 See [docs/skill-management.md](./docs/skill-management.md) for the state and update model.
 
@@ -200,20 +202,14 @@ implementation, and review. It includes the skills those stages depend on.
 
 - `prototype` is an unmodified copy of Matt Pocock's skill for building throwaway logic or UI experiments. Install it with `batman experimental add prototype --target codex`, `--target copilot`, or `--target all`.
 
-See [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md) for sources, adaptations, and licenses.
-
-Every stable skill borrowed from Matt Pocock or pstack keeps an unchanged
-upstream snapshot in `source/`, with provenance and dates in `source/SOURCE.md`.
-Batman excludes source folders
-from installed copies and active-skill hashes. Git history preserves earlier
-snapshots after refreshes.
+See [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md) for sources and licenses.
 
 Use the repository-local `$maintain-skill-sources` skill to check or refresh
-snapshots, for example "Use $maintain-skill-sources to check implement" or
-"Use $maintain-skill-sources to refresh implement's source". Checking compares
-upstream with the snapshot and records the check date. Refreshing replaces
-the snapshot while preserving the personal skill. The maintenance skill lives
-under `.agents/skills/` and is manual-only; Batman does not install it globally.
+canonical upstream skills, for example "Use $maintain-skill-sources to check
+implement". Checks compare the Batman directory directly with upstream;
+refreshes replace it with upstream bytes and update the manifest. Git history
+preserves earlier revisions. The maintenance skill lives under `.agents/skills/`
+and is manual-only; Batman does not install it globally.
 
 ## Checks
 

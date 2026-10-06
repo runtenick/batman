@@ -108,135 +108,64 @@ for skill_dir in "$source_dir"/* "$source_dir"/*/*; do
     fi
 
     allow_missing=false
-    if [ -f "$skill_dir/source/SOURCE.md" ] && [ -f "$skill_dir/source/SKILL.md" ] &&
-        [ "$(portable_invocation_policy "$skill_dir/source/SKILL.md" true)" = false ]; then
-        allow_missing=true
-    fi
+    is_borrowed_skill "$skill_name" && allow_missing=true
     if ! portable_invocation_policy "$skill_file" "$allow_missing" >/dev/null; then
-        printf '%s\n' "invalid  $skill_name must set disable-model-invocation to exactly true or false, or omit it for a model-invoked source (skills without a source are manual by default)." >&2
+        printf 'invalid  %s has an invalid invocation policy; authored skills must declare disable-model-invocation.\n' "$skill_name" >&2
         errors=$((errors + 1))
     fi
 
     if [ -f "$metadata_file" ] && has_codex_invocation_policy "$metadata_file" &&
-        ! { [ -f "$skill_dir/source/SOURCE.md" ] &&
-            [ -f "$skill_dir/source/agents/openai.yaml" ] &&
-            [ "$(hash_file "$metadata_file")" = "$(hash_file "$skill_dir/source/agents/openai.yaml")" ]; }; then
-        printf '%s\n' "invalid  $skill_name sets policy.allow_implicit_invocation in canonical agents/openai.yaml; the installer derives that Codex policy from disable-model-invocation." >&2
+        ! is_borrowed_skill "$skill_name"; then
+        printf 'invalid  %s sets a canonical Codex policy; the installer derives authored skill policies.\n' "$skill_name" >&2
         errors=$((errors + 1))
     fi
 done
 
-experimental_dir="$source_dir/experimental"
-if [ -d "$experimental_dir" ]; then
-    manifest_file="$experimental_dir/sources.tsv"
-    manifest_skills=
-
-    if [ ! -f "$manifest_file" ]; then
-        printf 'invalid  experimental skills have no sources.tsv manifest\n' >&2
+# Experiments are ordinary skill folders. They need no pin or integrity manifest.
+for skill_dir in "$source_dir"/experimental/*; do
+    [ -d "$skill_dir" ] || continue
+    skill_name=${skill_dir##*/}
+    if [ ! -f "$skill_dir/SKILL.md" ]; then
+        printf 'invalid  experimental skill %s has no SKILL.md\n' "$skill_name" >&2
         errors=$((errors + 1))
-    else
-        tab=$(printf '\t')
-        while IFS="$tab" read -r skill_name repository commit upstream_path expected_hash yaml_source extra; do
-            case $skill_name in
-                ''|'#'*) continue ;;
-            esac
-
-            case $skill_name in
-                *[!a-z0-9-]*|-*|*-)
-                    printf 'invalid  experimental skill name: %s\n' "$skill_name" >&2
-                    errors=$((errors + 1))
-                    continue
-                    ;;
-            esac
-
-            case " $manifest_skills " in
-                *" $skill_name "*)
-                    printf 'invalid  duplicate experimental manifest entry: %s\n' "$skill_name" >&2
-                    errors=$((errors + 1))
-                    continue
-                    ;;
-            esac
-            manifest_skills="$manifest_skills $skill_name"
-
-            if [ -n "$extra" ] || [ -z "$repository" ] || [ -z "$upstream_path" ] || [ -z "$expected_hash" ] || [ -z "$yaml_source" ]; then
-                printf 'invalid  malformed experimental manifest entry: %s\n' "$skill_name" >&2
-                errors=$((errors + 1))
-                continue
-            fi
-
-            if [ "${#commit}" -ne 40 ]; then
-                printf 'invalid  %s must pin a full 40-character commit SHA\n' "$skill_name" >&2
-                errors=$((errors + 1))
-            else
-                case $commit in
-                    *[!0-9a-f]*)
-                        printf 'invalid  %s has a non-hex commit SHA\n' "$skill_name" >&2
-                        errors=$((errors + 1))
-                        ;;
-                esac
-            fi
-
-            if [ "${#expected_hash}" -ne 64 ]; then
-                printf 'invalid  %s must record a full SHA-256 content hash\n' "$skill_name" >&2
-                errors=$((errors + 1))
-            else
-                case $expected_hash in
-                    *[!0-9a-f]*)
-                        printf 'invalid  %s has a non-hex content hash\n' "$skill_name" >&2
-                        errors=$((errors + 1))
-                        ;;
-                esac
-            fi
-
-            case $yaml_source in
-                upstream)
-                    if [ ! -f "$experimental_dir/$skill_name/agents/openai.yaml" ]; then
-                        printf 'invalid  %s declares an upstream agents/openai.yaml, but the file is missing\n' "$skill_name" >&2
-                        errors=$((errors + 1))
-                    fi
-                    ;;
-                batman)
-                    if [ ! -f "$experimental_dir/$skill_name/agents/openai.yaml" ]; then
-                        printf 'invalid  %s declares a Batman-created agents/openai.yaml, but the file is missing\n' "$skill_name" >&2
-                        errors=$((errors + 1))
-                    fi
-                    ;;
-                *)
-                    printf 'invalid  %s has an unknown openai-yaml source: %s\n' "$skill_name" "$yaml_source" >&2
-                    errors=$((errors + 1))
-                    ;;
-            esac
-
-            if stable_skill_source "$skill_name" >/dev/null; then
-                printf 'invalid  %s exists as both a stable and experimental skill\n' "$skill_name" >&2
-                errors=$((errors + 1))
-            fi
-
-            if [ ! -f "$experimental_dir/$skill_name/SKILL.md" ]; then
-                printf 'invalid  experimental skill %s has no SKILL.md\n' "$skill_name" >&2
-                errors=$((errors + 1))
-                continue
-            fi
-
-            actual_hash=$(raw_skill_hash "$experimental_dir/$skill_name")
-            if [ "$actual_hash" != "$expected_hash" ]; then
-                printf 'invalid  %s differs from its pinned raw source\n' "$skill_name" >&2
-                errors=$((errors + 1))
-            fi
-        done < "$manifest_file"
+    elif ! portable_invocation_policy "$skill_dir/SKILL.md" true >/dev/null; then
+        printf 'invalid  experimental skill %s has an invalid invocation policy\n' "$skill_name" >&2
+        errors=$((errors + 1))
     fi
+    if stable_skill_source "$skill_name" >/dev/null; then
+        printf 'invalid  %s exists as both a stable and experimental skill\n' "$skill_name" >&2
+        errors=$((errors + 1))
+    fi
+done
 
-    for skill_dir in "$experimental_dir"/*; do
-        [ -d "$skill_dir" ] || continue
-        skill_name=${skill_dir##*/}
-        case " $manifest_skills " in
-            *" $skill_name "*) ;;
-            *)
-                printf 'invalid  experimental skill %s has no manifest entry\n' "$skill_name" >&2
+if [ -f "$source_dir/sources.tsv" ]; then
+    seen_sources=
+    tab=$(printf '\t')
+    while IFS="$tab" read -r skill_name repository upstream_path ref commit expected_hash extra; do
+        case $skill_name in ''|'#'*) continue ;; esac
+        case " $seen_sources " in
+            *" $skill_name "*)
+                printf 'invalid  duplicate provenance: %s\n' "$skill_name" >&2
                 errors=$((errors + 1))
                 ;;
         esac
-    done
+        seen_sources="$seen_sources $skill_name"
+        if [ -n "$extra" ] || [ -z "$repository" ] || [ -z "$upstream_path" ] ||
+            [ -z "$ref" ] || [ -z "$commit" ] || [ "${#expected_hash}" -ne 64 ]; then
+            printf 'invalid  malformed provenance: %s\n' "$skill_name" >&2
+            errors=$((errors + 1))
+            continue
+        fi
+        if ! canonical_dir=$(stable_skill_source "$skill_name"); then
+            printf 'invalid  provenance for unknown stable skill: %s\n' "$skill_name" >&2
+            errors=$((errors + 1))
+            continue
+        fi
+        if [ "$(raw_skill_hash "$canonical_dir")" != "$expected_hash" ]; then
+            printf 'invalid  %s differs from its recorded upstream content\n' "$skill_name" >&2
+            errors=$((errors + 1))
+        fi
+    done < "$source_dir/sources.tsv"
 fi
 
 if [ "$skills_checked" -eq 0 ]; then

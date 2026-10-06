@@ -28,11 +28,24 @@ The records mean:
 - `source-hash` identifies the canonical skill content used for the last synchronization.
 - `installed-hash` identifies the last installed content, excluding generated invocation metadata.
 
-Stable skills may keep upstream reference files in a top-level `source/` folder.
-That folder is excluded from both hashes and installed projections. Refreshing
-an upstream snapshot therefore does not create an installation update or conflict.
-Experimental skills retain their complete upstream directory in projections.
+Borrowed stable skill directories are the canonical upstream copies. They have
+no duplicate snapshots. `skills/sources.tsv` records skill name, repository,
+upstream path, tracked ref, commit, and a SHA-256 directory hash. The checker
+validates canonical bytes against that hash, including supporting files and
+agent metadata. The hash is SHA-256 of sorted `./path<TAB>file-sha256` lines,
+with a newline after each line, using C locale ordering.
 
+Upstream maintenance compares directly with these directories. Refreshes update
+the canonical files and manifest together; installed projections then receive
+the change through synchronization. Git history preserves previous revisions.
+Batman Codex UI metadata lives in `scripts/codex-metadata/<skill>.yaml` and
+is added only to Codex projections when upstream supplies none. Changes to
+these files participate in installation update detection.
+Batman-specific changes belong outside borrowed directories. Rename a customized
+third-party skill and treat it as a separate owned skill.
+
+Prefer manual invocation for top-level workflows and automatic invocation for
+behavior that generally applies or dependencies invoked by other skills.
 The invocation preference is local state. Stable skills inherit their source's default invocability; skills without a source are manual by default. The canonical `SKILL.md` preserves the source's invocation field, including omission for model-invoked skills. Fresh installations use this default. Existing local settings take precedence and must not be written back into the repository.
 
 Experimental skills use each target's state file after the owner adds them. Their source path points into `skills/experimental/`, and their installed projections start with the source invocation default and preserve existing local settings.
@@ -118,8 +131,8 @@ dependencies together too.
 
 The groups are `dev-workflow` and `communication`. Installed directories
 remain flat at `<skills-directory>/<name>`. Skills in the same group remain siblings in both
-layouts. Discovery excludes experimental skills and upstream `source/` snapshots.
-Experimental skills retain their separate manifest and installation commands.
+layouts. Stable discovery excludes the experimental folder.
+Experiments have separate installation commands.
 
 ### `scan`
 
@@ -166,7 +179,7 @@ Use --include-unknown to view them.
 ```
 
 The recursive search counts other `SKILL.md` files as unknown, including
-reference snapshots and source copies. `--include-unknown` adds their rows with
+downloaded references and repository skill copies. `--include-unknown` adds their rows with
 scope `Unknown`; it does not change the search boundaries. Git object stores
 are excluded. Installed skill-folder links and links to project skill roots
 are inspected, but arbitrary directory symlinks are not recursively followed.
@@ -227,11 +240,16 @@ When syncing all targets, identical outcomes are grouped onto one row per skill 
 
 ### `experimental`
 
-Experimental skills are raw copies of third-party sources under `skills/experimental/<name>`. `sources.tsv` pins each copy to a repository, commit, upstream path, and content hash. The repository check rejects any drift, including extra files. If an upstream skill does not supply `agents/openai.yaml`, Batman may add that file and records its origin in the manifest.
+`skills/experimental/<name>` holds skills the owner has not fully validated or
+committed to the stable set. Experiments need no integrity manifest.
 
-`experimental list` reports the available experiments and their installation state for Codex, Copilot, or both. `experimental add <skill>` installs or refreshes one experiment for the selected target. Codex adds `policy.allow_implicit_invocation` and Copilot adds `disable-model-invocation` to reflect the source default or existing local setting. The vendored files remain unchanged. `experimental remove <skill>` removes only a copy managed from the matching experimental source. It asks before removing local changes.
-
-Experimental commands support `codex`, `copilot`, and `all`. Codex remains the default. Ordinary `sync`, `status`, `enable`, `disable`, and `update` continue to manage stable skills only. Promoting an experiment into the stable skill collection is a separate repository change after real use supports adaptation.
+`experimental list` reports experiments and their installation state.
+`experimental add <skill>` installs or refreshes one for Codex, Copilot, or both,
+using the same projections and local invocation preferences as stable skills.
+`experimental remove <skill>` removes the matching managed copy and asks before
+removing local changes. Without `--target`, these commands use the saved profile
+or agent detection described above. Ordinary stable commands exclude this folder.
+Moving an experiment into the stable set is an explicit repository change.
 
 ## Migration
 

@@ -35,14 +35,7 @@ managed_hash() {
 
     (
         cd "$skill_dir"
-        case $skill_dir in
-            "$source_dir"/experimental/*)
-                find . -type f ! -name '.batman-source'
-                ;;
-            *)
-                find . -path './source' -prune -o -type f ! -name '.batman-source' -print
-                ;;
-        esac | LC_ALL=C sort | while IFS= read -r relative_path; do
+        find . -type f ! -name '.batman-source' | LC_ALL=C sort | while IFS= read -r relative_path; do
             case $relative_path in
                 ./SKILL.md)
                     normalized_hash=$(awk '!/^disable-model-invocation:[[:space:]]*/' "$relative_path" | hash_stdin)
@@ -96,6 +89,17 @@ managed_hash() {
 
             printf '%s\t%s\n' "$relative_path" "$normalized_hash"
         done
+        # Include external UI metadata in canonical update detection.
+        case $skill_dir in
+            "$source_dir"/*)
+                if [ ! -f "$skill_dir/agents/openai.yaml" ]; then
+                    metadata_source=$(codex_metadata_source "$skill_dir")
+                    if [ -f "$metadata_source" ]; then
+                        printf 'codex-metadata\t%s\n' "$(hash_file "$metadata_source")"
+                    fi
+                fi
+                ;;
+        esac
     ) | hash_stdin
 }
 
@@ -281,16 +285,19 @@ render_update_projection() {
     mkdir -p "$projection_dir"
     for skill_entry in "$skill_source"/* "$skill_source"/.[!.]* "$skill_source"/..?*; do
         [ -e "$skill_entry" ] || [ -L "$skill_entry" ] || continue
-        case $skill_source in
-            "$source_dir"/experimental/*) ;;
-            *) [ "${skill_entry##*/}" = source ] && continue ;;
-        esac
         cp -R "$skill_entry" "$projection_dir"/
     done
 
     if [ "$projection_kind" = codex ]; then
         render_codex_skill "$skill_source/SKILL.md" "$projection_dir/SKILL.md.tmp"
         mv "$projection_dir/SKILL.md.tmp" "$projection_dir/SKILL.md"
+        if [ ! -f "$projection_dir/agents/openai.yaml" ]; then
+            metadata_source=$(codex_metadata_source "$skill_source")
+            if [ -f "$metadata_source" ]; then
+                mkdir -p "$projection_dir/agents"
+                cp "$metadata_source" "$projection_dir/agents/openai.yaml"
+            fi
+        fi
         write_invocation codex "$projection_dir" "$invocation"
     else
         write_portable_invocation "$projection_dir/SKILL.md" "$invocation"

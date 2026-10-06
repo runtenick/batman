@@ -148,14 +148,7 @@ managed_hash() {
 
     (
         cd "$skill_dir"
-        case $skill_dir in
-            "$source_dir"/experimental/*)
-                find . -type f ! -name '.batman-source'
-                ;;
-            *)
-                find . -path './source' -prune -o -type f ! -name '.batman-source' -print
-                ;;
-        esac | LC_ALL=C sort | while IFS= read -r relative_path; do
+        find . -type f ! -name '.batman-source' | LC_ALL=C sort | while IFS= read -r relative_path; do
             case $relative_path in
                 ./SKILL.md)
                     normalized_hash=$(awk '!/^disable-model-invocation:[[:space:]]*/' "$relative_path" | hash_stdin)
@@ -209,6 +202,17 @@ managed_hash() {
 
             printf '%s\t%s\n' "$relative_path" "$normalized_hash"
         done
+        # Include external UI metadata in canonical update detection.
+        case $skill_dir in
+            "$source_dir"/*)
+                if [ ! -f "$skill_dir/agents/openai.yaml" ]; then
+                    metadata_source=$(codex_metadata_source "$skill_dir")
+                    if [ -f "$metadata_source" ]; then
+                        printf 'codex-metadata\t%s\n' "$(hash_file "$metadata_source")"
+                    fi
+                fi
+                ;;
+        esac
     ) | hash_stdin
 }
 
@@ -369,10 +373,6 @@ render_projection() {
     mkdir -p "$projection_dir"
     for skill_entry in "$skill_dir"/* "$skill_dir"/.[!.]* "$skill_dir"/..?*; do
         [ -e "$skill_entry" ] || [ -L "$skill_entry" ] || continue
-        case $skill_dir in
-            "$source_dir"/experimental/*) ;;
-            *) [ "${skill_entry##*/}" = source ] && continue ;;
-        esac
         cp -R "$skill_entry" "$projection_dir"/
     done
 
@@ -385,7 +385,7 @@ render_projection() {
         else
             allow_implicit=false
         fi
-        render_codex_metadata "$skill_dir/agents/openai.yaml" "$projection_dir/agents/openai.yaml.tmp" "$allow_implicit"
+        render_codex_metadata "$(codex_metadata_source "$skill_dir")" "$projection_dir/agents/openai.yaml.tmp" "$allow_implicit"
         mv "$projection_dir/agents/openai.yaml.tmp" "$projection_dir/agents/openai.yaml"
     else
         render_portable_skill "$skill_dir/SKILL.md" "$projection_dir/SKILL.md.tmp" "$invocation"

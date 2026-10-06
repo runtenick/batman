@@ -10,8 +10,27 @@ is_stable_skill_dir() {
     [ "$stable_parent" = "$source_dir" ] && return 0
     [ "${stable_parent%/*}" = "$source_dir" ] || return 1
     [ "$stable_parent" != "$source_dir/experimental" ] || return 1
-    # An ungrouped skill may contain an upstream source/SKILL.md snapshot.
+    # A skill's supporting directories are not separate grouped skills.
     [ ! -f "$stable_parent/SKILL.md" ]
+}
+
+# Provenance lives outside canonical upstream directories.
+is_borrowed_skill() {
+    [ -f "$source_dir/sources.tsv" ] || return 1
+    awk -F '\t' -v skill="$1" '
+        /^[[:space:]]*#/ || /^[[:space:]]*$/ { next }
+        $1 == skill { found = 1 }
+        END { exit found ? 0 : 1 }
+    ' "$source_dir/sources.tsv"
+}
+
+# Batman UI metadata is used only when upstream supplies none.
+codex_metadata_source() {
+    if [ -f "$1/agents/openai.yaml" ]; then
+        printf '%s\n' "$1/agents/openai.yaml"
+    else
+        printf '%s\n' "$script_dir/codex-metadata/${1##*/}.yaml"
+    fi
 }
 
 # Canonical fields preserve source defaults. Omitted fields are automatic only
@@ -19,8 +38,7 @@ is_stable_skill_dir() {
 default_skill_invocation() {
     default_skill_dir=$1
     default_policy=$(portable_invocation_policy "$default_skill_dir/SKILL.md")
-    if [ -z "$default_policy" ] && [ -f "$default_skill_dir/source/SOURCE.md" ] &&
-        [ -f "$default_skill_dir/source/SKILL.md" ]; then
+    if [ -z "$default_policy" ] && is_borrowed_skill "${default_skill_dir##*/}"; then
         default_policy=false
     fi
     case $default_skill_dir in

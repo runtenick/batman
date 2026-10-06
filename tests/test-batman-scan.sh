@@ -51,7 +51,7 @@ make_skill "$project/.agents/skills/shared" shared
 make_skill "$project/.github/skills/deploy" '"deploy-task"'
 make_skill "$projects/other/.claude/skills/check" check
 make_skill "$project/examples/scattered" scattered
-make_skill "$project/.agents/skills/shared/source" snapshot
+make_skill "$project/.agents/skills/shared/examples" nested-example
 make_skill "$project/.git/objects/ignored" ignored-git
 before=$(find "$test_root" -type f -exec cksum {} \; | LC_ALL=C sort)
 output=$(scan "$projects")
@@ -65,14 +65,14 @@ assert_row check Project Copilot "$projects/other/.claude/skills/check"
 assert_contains '2 skills found outside recognized installation locations.'
 assert_contains 'Use --include-unknown to view them.'
 assert_absent scattered
-assert_absent snapshot
+assert_absent nested-example
 assert_absent ignored-git
 after=$(find "$test_root" -type f -exec cksum {} \; | LC_ALL=C sort)
 [ "$before" = "$after" ] || fail 'scan changed fixture files'
 
 output=$(scan --include-unknown "$projects")
 assert_row scattered Unknown '-' "$project/examples/scattered"
-assert_row snapshot Unknown '-' "$project/.agents/skills/shared/source"
+assert_row nested-example Unknown '-' "$project/.agents/skills/shared/examples"
 assert_absent 'Use --include-unknown'
 
 printf '%s\n' 'Testing default project root and explicit directory boundaries...'

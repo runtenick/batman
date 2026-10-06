@@ -3,7 +3,9 @@
 This handoff records the October 5, 2026 review of
 [Matt's v1.3 changelog](https://www.aihero.dev/skills/skills-changelog-v13-implement-spec-pr-retro-and-glossary-md).
 This is a historical record. The October 5 upstream reset supersedes the
-adaptations below. Pending items require separate selection by the owner.
+adaptations below. The canonical upstream model in `skill-management.md`
+supersedes its snapshot and experimental-manifest guidance. Pending items require
+separate selection by the owner.
 
 ## Adopted glossary convention
 
@@ -44,7 +46,7 @@ work-in-progress reviews. It scopes out unrelated files and hunks. The
 Standards and Spec axes remain separate.
 
 The source-maintenance skill's separate commit-authorization requirement was
-removed too. Upstream snapshots remain unchanged.
+removed too. Borrowed skill content remains unchanged during that policy change.
 
 ## New skills, candidates for evaluation
 
@@ -57,13 +59,10 @@ removed too. Upstream snapshots remain unchanged.
 - `implement-spec`: a candidate for whole-spec implementation. Its tracker
   setup, orchestration, PR lifecycle, and cleanup need separate evaluation.
 
-If selected for evaluation, put each unchanged upstream directory under
-`skills/experimental/`, pin its commit and hash in `sources.tsv`, and keep
-installation explicit. Promotion or personal adaptation is a separate decision.
+If selected for evaluation, put candidates under `skills/experimental/` and
+install them individually. Moving one to the stable set is a separate decision.
 
 ## Source maintenance
 
-The twelve source snapshots added October 5 already include v1.3. The existing
-`implement` and `writing-for-agents` snapshots retain their October 2 pins.
-Use `$maintain-skill-sources` for a check before deciding whether to refresh
-those snapshots. Snapshot maintenance does not update active personal skills.
+Use `$maintain-skill-sources` to compare the canonical stable directories against
+upstream. Refreshes replace those directories and update `skills/sources.tsv`.

@@ -23,7 +23,7 @@ mkdir -p "$config_dir/batman"
 printf '%s\n' codex > "$config_dir/batman/default-profile"
 
 cp -R "$repo_dir/skills" "$source_dir"
-skill_count=$(find "$source_dir" -mindepth 2 -maxdepth 3 -type f -name SKILL.md ! -path "$source_dir/experimental/*" ! -path "$source_dir/*/source/*" | wc -l | tr -d ' ')
+skill_count=$(find "$source_dir" -mindepth 2 -maxdepth 3 -type f -name SKILL.md ! -path "$source_dir/experimental/*" | wc -l | tr -d ' ')
 
 fail() {
     printf 'FAIL: %s\n' "$1" >&2
@@ -62,6 +62,32 @@ run_env() {
         "$@"
 }
 
+# Fixture upstream changes update provenance just as a real refresh would.
+record_fixture_hash() {
+    fixture_name=$1
+    fixture_dir=$2
+    fixture_hash=$(
+        cd "$fixture_dir"
+        find . -type f | LC_ALL=C sort | while IFS= read -r fixture_path; do
+            if command -v sha256sum >/dev/null 2>&1; then
+                file_hash=$(sha256sum "$fixture_path" | awk '{print $1}')
+            else
+                file_hash=$(shasum -a 256 "$fixture_path" | awk '{print $1}')
+            fi
+            printf '%s\t%s\n' "$fixture_path" "$file_hash"
+        done | if command -v sha256sum >/dev/null 2>&1; then
+            sha256sum | awk '{print $1}'
+        else
+            shasum -a 256 | awk '{print $1}'
+        fi
+    )
+    awk -F '\t' -v OFS='\t' -v skill="$fixture_name" -v hash="$fixture_hash" '
+        $1 == skill { $6 = hash }
+        { print }
+    ' "$source_dir/sources.tsv" > "$test_root/sources-updated.tsv"
+    mv "$test_root/sources-updated.tsv" "$source_dir/sources.tsv"
+}
+
 printf '%s\n' 'Checking canonical skill policies...'
 "$check_script" >/dev/null
 
@@ -72,6 +98,59 @@ if "$check_script" "$source_dir" >/dev/null 2>&1; then
     fail 'modified canonical invocation metadata must fail validation'
 fi
 cp "$test_root/implement-openai.yaml" "$source_dir/dev-workflow/implement/agents/openai.yaml"
+
+printf '%s\n' 'Testing stable provenance validation...'
+cp "$source_dir/sources.tsv" "$test_root/sources-valid.tsv"
+awk -F '\t' '$1 == "tdd"' "$test_root/sources-valid.tsv" >> "$source_dir/sources.tsv"
+if output=$("$check_script" "$source_dir" 2>&1); then
+    fail 'duplicate provenance should fail'
+fi
+assert_contains "$output" 'duplicate provenance: tdd'
+cp "$test_root/sources-valid.tsv" "$source_dir/sources.tsv"
+printf 'missing\thttps://example.com/skills\tskills/missing\tmain\tcommit\t%s\n' \
+    '0000000000000000000000000000000000000000000000000000000000000000' >> "$source_dir/sources.tsv"
+if output=$("$check_script" "$source_dir" 2>&1); then
+    fail 'unknown provenance skill should fail'
+fi
+assert_contains "$output" 'provenance for unknown stable skill: missing'
+cp "$test_root/sources-valid.tsv" "$source_dir/sources.tsv"
+printf '%s\n' 'malformed' >> "$source_dir/sources.tsv"
+if output=$("$check_script" "$source_dir" 2>&1); then
+    fail 'malformed provenance should fail'
+fi
+assert_contains "$output" 'malformed provenance: malformed'
+cp "$test_root/sources-valid.tsv" "$source_dir/sources.tsv"
+printf '%s\n' 'Extra upstream file' > "$source_dir/dev-workflow/tdd/extra.txt"
+if output=$("$check_script" "$source_dir" 2>&1); then
+    fail 'extra borrowed skill files should fail'
+fi
+assert_contains "$output" 'tdd differs from its recorded upstream content'
+mv "$source_dir/dev-workflow/tdd/extra.txt" "$test_root/extra.txt"
+
+printf '%s\n' 'Testing external Codex metadata refreshes...'
+metadata_scripts="$test_root/metadata-scripts"
+cp -R "$repo_dir/scripts" "$metadata_scripts"
+metadata_sources="$test_root/metadata-sources"
+mkdir -p "$metadata_sources"
+cp -R "$source_dir/communication/bro" "$metadata_sources/bro"
+awk -F '\t' '$1 == "bro"' "$source_dir/sources.tsv" > "$metadata_sources/sources.tsv"
+metadata_destination="$test_root/metadata-codex"
+run_metadata_env() {
+    run_env env BATMAN_SOURCE_DIR="$metadata_sources" \
+        BATMAN_CODEX_SKILLS_DIR="$metadata_destination" "$metadata_scripts/batman" "$@"
+}
+run_metadata_env sync --target codex >/dev/null
+run_metadata_env enable bro --target codex >/dev/null
+printf '%s\n' '# Updated UI metadata' >> "$metadata_scripts/codex-metadata/bro.yaml"
+output=$(run_metadata_env status --target codex)
+assert_contains "$output" 'automatic    clean        available'
+run_metadata_env sync --target codex >/dev/null
+assert_file_contains "$metadata_destination/bro/agents/openai.yaml" '# Updated UI metadata'
+assert_file_contains "$metadata_destination/bro/agents/openai.yaml" 'allow_implicit_invocation: true'
+printf '%s\n' '# Explicit metadata update' >> "$metadata_scripts/codex-metadata/bro.yaml"
+run_metadata_env update bro --target codex >/dev/null
+assert_file_contains "$metadata_destination/bro/agents/openai.yaml" '# Explicit metadata update'
+assert_file_contains "$metadata_destination/bro/agents/openai.yaml" 'allow_implicit_invocation: true'
 
 printf '%s\n' 'Testing group browsing and selected synchronization...'
 printf '  # ignored\tmissing\t-\n' >> "$source_dir/groups.tsv"
@@ -102,7 +181,7 @@ assert_file_contains "$group_copilot_dir/implement/SKILL.md" 'disable-model-invo
 assert_file_contains "$group_codex_dir/setup-matt-pocock-skills/agents/openai.yaml" 'allow_implicit_invocation: false'
 assert_file_contains "$group_copilot_dir/setup-matt-pocock-skills/SKILL.md" 'disable-model-invocation: true'
 [ -f "$group_codex_dir/setup-matt-pocock-skills/issue-tracker-local.md" ] || fail 'setup template was not installed'
-[ ! -e "$group_codex_dir/setup-matt-pocock-skills/source" ] || fail 'setup source snapshot was installed'
+
 printf '%s\n' 'group local edit' >> "$group_codex_dir/implement/SKILL.md"
 run_group_env "$batman_script" sync --group dev-workflow --target codex >/dev/null
 assert_file_contains "$group_codex_dir/implement/SKILL.md" 'group local edit'
@@ -123,7 +202,9 @@ default_source_dir="$test_root/default-sources"
 mkdir -p "$default_source_dir"
 cp -R "$source_dir/dev-workflow/implement" "$default_source_dir/implement"
 cp -R "$source_dir/dev-workflow/tdd" "$default_source_dir/tdd"
-mkdir -p "$default_source_dir/local-skill"
+awk -F '\t' '$1 == "implement" || $1 == "tdd"' "$source_dir/sources.tsv" > "$default_source_dir/sources.tsv"
+mkdir -p "$default_source_dir/local-skill/source"
+printf '%s\n' 'Authored supporting file' > "$default_source_dir/local-skill/source/notes.md"
 printf '%s\n' '---' 'name: local-skill' 'description: A local skill.' \
     'disable-model-invocation: true' '---' 'Follow local instructions.' \
     > "$default_source_dir/local-skill/SKILL.md"
@@ -135,6 +216,7 @@ for default_target in codex copilot portable; do
         BATMAN_COPILOT_SKILLS_DIR="$default_destination" \
         BATMAN_PORTABLE_SKILLS_DIR="$default_destination" \
         "$batman_script" sync --target "$default_target" >/dev/null
+    [ -f "$default_destination/local-skill/source/notes.md" ] || fail 'supporting source directory must be installed'
     if [ "$default_target" = codex ]; then
         assert_file_contains "$default_destination/tdd/agents/openai.yaml" 'allow_implicit_invocation: true'
         assert_file_contains "$default_destination/implement/agents/openai.yaml" 'allow_implicit_invocation: false'
@@ -270,19 +352,20 @@ run_group_env env BATMAN_PORTABLE_SKILLS_DIR="$group_portable_dir" \
 [ -f "$group_portable_dir/unslop/SKILL.md" ] || fail 'manifest-free sync should install communication skills'
 mv "$test_root/groups-withheld.tsv" "$source_dir/groups.tsv"
 
-printf '%s\n' 'Checking experimental source integrity...'
+printf '%s\n' 'Testing experimental folders without integrity manifests...'
 cp "$source_dir/experimental/prototype/SKILL.md" "$test_root/prototype-SKILL.md"
-printf '%s\n' 'source drift' >> "$source_dir/experimental/prototype/SKILL.md"
-if "$check_script" "$source_dir" >/dev/null 2>&1; then
-    fail 'experimental source drift should fail validation'
-fi
-if output=$(run_env "$batman_script" experimental add prototype 2>&1); then
-    fail 'experimental add should reject source drift'
-fi
-assert_contains "$output" 'differs from its pinned raw source'
-[ ! -e "$codex_dir/prototype" ] || fail 'rejected experimental add should not install the skill'
-cp "$test_root/prototype-SKILL.md" "$source_dir/experimental/prototype/SKILL.md"
+printf '%s\n' 'evaluation edit' >> "$source_dir/experimental/prototype/SKILL.md"
 "$check_script" "$source_dir" >/dev/null
+mkdir -p "$source_dir/experimental/local-experiment"
+printf '%s\n' '---' 'name: local-experiment' 'description: A local experiment' '---' \
+    'Try this skill.' > "$source_dir/experimental/local-experiment/SKILL.md"
+"$check_script" "$source_dir" >/dev/null
+output=$(run_env "$batman_script" experimental add local-experiment --target codex 2>&1)
+assert_contains "$output" 'installed'
+[ -f "$codex_dir/local-experiment/SKILL.md" ] || fail 'manifest-free experiment was not installed'
+run_env "$batman_script" experimental remove local-experiment --target codex >/dev/null
+mv "$source_dir/experimental/local-experiment" "$test_root/local-experiment"
+cp "$test_root/prototype-SKILL.md" "$source_dir/experimental/prototype/SKILL.md"
 
 printf '%s\n' 'Testing fresh and repeat synchronization...'
 output=$(run_env "$batman_script" sync --target codex 2>&1)
@@ -297,23 +380,24 @@ output=$(run_env "$batman_script" sync --target codex 2>&1)
 assert_contains "$output" "$skill_count unchanged"
 assert_contains "$output" '0 conflicts'
 
-printf '%s\n' 'Testing upstream reference isolation...'
-[ ! -e "$codex_dir/implement/source" ] || fail 'Codex sync should omit upstream references'
-[ ! -e "$copilot_dir/implement/source" ] || fail 'Copilot sync should omit upstream references'
-printf '%s\n' 'reference-only edit' >> "$source_dir/dev-workflow/implement/source/SKILL.md"
+printf '%s\n' 'Testing provenance isolation and Codex UI metadata...'
+cp "$source_dir/sources.tsv" "$test_root/sources-original.tsv"
+# A tracked ref change without new bytes must not trigger an installed update.
+awk -F '\t' -v OFS='\t' '$1 == "implement" { $4 = "test-ref" } { print }' \
+    "$test_root/sources-original.tsv" > "$source_dir/sources.tsv"
 output=$(run_env "$batman_script" status --target codex 2>&1)
 assert_contains "$output" 'implement          codex            manual       clean        current'
 output=$(run_env "$batman_script" sync --target codex 2>&1)
 assert_contains "$output" "$skill_count unchanged"
-run_env "$batman_script" update implement --target codex >/dev/null
-run_env "$batman_script" update implement --target copilot >/dev/null
-[ ! -e "$codex_dir/implement/source" ] || fail 'Codex update should omit upstream references'
-[ ! -e "$copilot_dir/implement/source" ] || fail 'Copilot update should omit upstream references'
+cp "$test_root/sources-original.tsv" "$source_dir/sources.tsv"
+for metadata_skill in bro unslop; do
+    [ ! -e "$source_dir/communication/$metadata_skill/agents/openai.yaml" ] || fail 'Batman UI metadata is inside a borrowed skill'
+    assert_file_contains "$codex_dir/$metadata_skill/agents/openai.yaml" 'display_name:'
+done
+run_env "$batman_script" update unslop --target codex >/dev/null
+assert_file_contains "$codex_dir/unslop/agents/openai.yaml" 'display_name: "Unslop"'
 portable_dir="$test_root/portable"
 run_env env BATMAN_PORTABLE_SKILLS_DIR="$portable_dir" "$batman_script" sync --target portable >/dev/null
-[ ! -e "$portable_dir/implement/source" ] || fail 'portable sync should omit upstream references'
-run_env env BATMAN_PORTABLE_SKILLS_DIR="$portable_dir" "$batman_script" update implement --target portable >/dev/null
-[ ! -e "$portable_dir/implement/source" ] || fail 'portable update should omit upstream references'
 
 printf '%s\n' 'Testing status and invocation management...'
 output=$(run_env "$batman_script" status --target codex 2>&1)
@@ -425,6 +509,7 @@ assert_contains "$output" 'local changes preserved'
 assert_file_contains "$codex_dir/unslop/SKILL.md" 'local edit'
 
 printf '%s\n' 'source update' >> "$source_dir/communication/unslop/SKILL.md"
+record_fixture_hash unslop "$source_dir/communication/unslop"
 if output=$(run_env "$batman_script" sync --target codex 2>&1); then
     fail 'sync should report a local/source conflict'
 fi

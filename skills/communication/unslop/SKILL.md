@@ -1,6 +1,6 @@
 ---
 name: unslop
-description: Cut AI tells from any writing. Must always apply when talking to a human or writing for a human.
+description: Cut AI tells from any writing. Must always apply.
 disable-model-invocation: true
 ---
 
